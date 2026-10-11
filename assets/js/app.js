@@ -1,6 +1,6 @@
 // GANIT SETU ADMIN DASHBOARD - LIVE SUPABASE DATA
-const SUPABASE_URL = "https://cbgojvnbkosdehvwerth.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_a5XOePzNSNn72WQm_xrIAQ_cj5Z01W_";
+const SUPABASE_URL = "https://iaefrigvgifzttmfswaz.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_02LxZ1tEEzcqobT3wtFeFQ_FkaQMSNw";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // Share the existing Admin auth client with pages that need the same session.
 window.supabaseClient = supabaseClient;

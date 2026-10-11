@@ -18,7 +18,7 @@
   // --------------------------------------------------
 
   const SUPABASE_URL =
-    'https://cbgojvnbkosdehvwerth.supabase.co';
+    'https://iaefrigvgifzttmfswaz.supabase.co';
 
   const FUNCTION_URL =
     SUPABASE_URL + '/functions/v1/facebook-oauth';

@@ -1,6 +1,6 @@
 (function(){
-  const SUPABASE_URL='https://cbgojvnbkosdehvwerth.supabase.co';
-  const ANON='sb_publishable_a5XOePzNSNn72WQm_xrIAQ_cj5Z01W_';
+  const SUPABASE_URL='https://iaefrigvgifzttmfswaz.supabase.co';
+  const ANON='sb_publishable_02LxZ1tEEzcqobT3wtFeFQ_FkaQMSNw';
   const AI_URL=SUPABASE_URL+'/functions/v1/gemini-generate-post';
   const IMAGE_FUNCTION_URL=SUPABASE_URL+'/functions/v1/cloudflare-generate-image';
   const FACEBOOK_URL=SUPABASE_URL+'/functions/v1/facebook-oauth';

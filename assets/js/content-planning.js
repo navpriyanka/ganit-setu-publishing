@@ -5,8 +5,8 @@
 (function () {
 'use strict';
 
-const GS_SUPABASE_URL = "https://cbgojvnbkosdehvwerth.supabase.co";
-const GS_SUPABASE_ANON_KEY = "sb_publishable_a5XOePzNSNn72WQm_xrIAQ_cj5Z01W_";
+const GS_SUPABASE_URL = "https://iaefrigvgifzttmfswaz.supabase.co";
+const GS_SUPABASE_ANON_KEY = "sb_publishable_02LxZ1tEEzcqobT3wtFeFQ_FkaQMSNw";
 
 // Content Planning uses the SAME Supabase client/session as the existing Admin Panel.
 // Do not create a second Auth project/client here.
