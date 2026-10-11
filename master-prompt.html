@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Master Prompt | गणित सेतु Admin</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/master-prompt.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand-inline"><span class="logo-small">GS</span><b>गणित सेतु</b><span class="tag">एडमिन पैनल</span></div>
+  <div class="master-top-actions">
+    <a href="dashboard.html" class="back-link">← Dashboard</a>
+    <button type="button" class="logout-btn" onclick="adminLogout()">Logout</button>
+  </div>
+</header>
+
+<main class="page master-page">
+  <section class="welcome-card master-hero">
+    <div>
+      <p class="eyebrow">CONTENT GENERATION</p>
+      <h1>Master Prompt</h1>
+      <p>GANIT SETU के content generation के लिए एक central prompt. इसे यहीं से edit और save किया जा सकता है।</p>
+    </div>
+    <div class="brand-badge">GS<br><small>MASTER PROMPT</small></div>
+  </section>
+
+  <section class="panel master-panel">
+    <div class="section-head master-head">
+      <div>
+        <h2>Master Prompt Editor</h2>
+        <p class="muted">नीचे prompt बदलें और Save Master Prompt दबाएँ। अगली बार यही saved prompt उपयोग किया जा सकेगा।</p>
+      </div>
+      <span id="promptStatus" class="status-badge">लोड हो रहा है...</span>
+    </div>
+
+    <div class="prompt-meta">
+      <div><span>Prompt Name</span><b id="promptName">Master Prompt</b></div>
+      <div><span>Last Updated</span><b id="promptUpdated">—</b></div>
+      <div><span>Active</span><b id="promptActive">—</b></div>
+    </div>
+
+    <label class="prompt-label" for="masterPromptText">Master Prompt</label>
+    <textarea id="masterPromptText" spellcheck="false" placeholder="यहाँ Master Prompt paste करें..."></textarea>
+
+    <div class="prompt-footer">
+      <span id="charCount">0 characters</span>
+      <div class="prompt-buttons">
+        <button type="button" class="secondary-btn" id="reloadPromptBtn">↻ Reload</button>
+        <button type="button" class="primary-btn" id="savePromptBtn">💾 Save Master Prompt</button>
+      </div>
+    </div>
+
+    <div id="saveMessage" class="save-message" hidden></div>
+  </section>
+
+
+  <section class="panel brand-reference-panel">
+    <div class="section-head master-head">
+      <div>
+        <h2>🎨 GANIT SETU Brand References</h2>
+        <p class="muted">इन 3 approved assets को एक ही जगह से upload, replace और download करें।</p>
+      </div>
+      <span id="brandStatus" class="status-badge">लोड हो रहा है...</span>
+    </div>
+
+    <div class="brand-grid">
+      <article class="brand-card">
+        <div class="brand-card-head"><h3>Static Wordmark</h3><span class="brand-chip">IMAGE / POST</span></div>
+        <div class="brand-preview"><img id="brandPreviewWordmark" alt="GANIT SETU Static Wordmark"></div>
+        <div class="brand-file" id="brandFileWordmark">Not uploaded</div>
+        <input id="brandInputWordmark" type="file" accept=".png,.jpg,.jpeg,.webp" hidden>
+        <div class="brand-actions">
+          <button type="button" class="secondary-btn" data-pick="brandInputWordmark">↥ Replace / Upload</button>
+          <button type="button" class="secondary-btn" data-download="wordmark">⬇ Download</button>
+        </div>
+      </article>
+
+      <article class="brand-card">
+        <div class="brand-card-head"><h3>Animated Wordmark</h3><span class="brand-chip">VIDEO</span></div>
+        <div class="brand-preview brand-preview-dark"><img id="brandPreviewAnimated" alt="GANIT SETU Animated Wordmark"></div>
+        <div class="brand-file" id="brandFileAnimated">Not uploaded</div>
+        <input id="brandInputAnimated" type="file" accept=".gif,.webm,.mp4,.png" hidden>
+        <div class="brand-actions">
+          <button type="button" class="secondary-btn" data-pick="brandInputAnimated">↥ Replace / Upload</button>
+          <button type="button" class="secondary-btn" data-download="animated_wordmark">⬇ Download</button>
+        </div>
+      </article>
+
+      <article class="brand-card">
+        <div class="brand-card-head"><h3>Original Logo</h3><span class="brand-chip">REFERENCE</span></div>
+        <div class="brand-preview"><img id="brandPreviewLogo" alt="GANIT SETU Original Logo"></div>
+        <div class="brand-file" id="brandFileLogo">Not uploaded</div>
+        <input id="brandInputLogo" type="file" accept=".png,.jpg,.jpeg,.webp,.svg" hidden>
+        <div class="brand-actions">
+          <button type="button" class="secondary-btn" data-pick="brandInputLogo">↥ Replace / Upload</button>
+          <button type="button" class="secondary-btn" data-download="original_logo">⬇ Download</button>
+        </div>
+      </article>
+    </div>
+
+    <div id="brandMessage" class="save-message" hidden></div>
+    <p class="brand-note">Approved rule: AI को नया logo/wordmark बनाने, spelling बदलने, रंग बदलने या design बदलने की अनुमति नहीं है।</p>
+  </section>
+
+  <section class="panel info-panel">
+    <h2>ध्यान दें</h2>
+    <ul>
+      <li>यह केवल Master Prompt की setting बदलता है।</li>
+      <li>Existing Content Day Planning और Question Pool को इस page से modify नहीं किया जाता।</li>
+      <li>Prompt में बदलाव के बाद Save करना जरूरी है।</li>
+      <li>बाद में prompt को फिर से इसी page से edit किया जा सकता है।</li>
+    </ul>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/app.js?v=20260926-master-prompt"></script>
+<script src="assets/js/master-prompt.js?v=20260926-v1"></script>
+</body>
+</html>

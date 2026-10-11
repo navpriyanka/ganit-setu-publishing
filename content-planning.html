@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Content Day Planning | Ganit Setu Admin</title>
+<link rel="stylesheet" href="assets/css/content-planning.css?v=20260926-final">
+</head>
+<body>
+<main class="content-page">
+  <header class="page-header">
+    <div>
+      <h1>📅 Content Day Planning</h1>
+      <p>Class 9/10 के लिए जरूरत के अनुसार Questions चुनें और हर content के लिए अलग prompt तैयार करें।</p>
+    </div>
+    <a class="back-btn" href="dashboard.html">← Dashboard</a>
+  </header>
+
+  <section class="panel question-selection-panel" id="questionSelectionPanel">
+    <div class="section-title-row">
+      <div>
+        <h2>🎯 Question Selection</h2>
+        <p class="section-help">Content बनाने के लिए पहले Questions चुनें। यही selected Questions आगे Content Creation में इस्तेमाल होंगे।</p>
+      </div>
+      <div class="selection-count-badge">Selected: <b id="selectedQuestionCount">0</b></div>
+    </div>
+
+    <div class="question-selection-controls">
+      <label>📘 Class
+        <select id="qsClass">
+          <option value="9">Class 9</option>
+          <option value="10">Class 10</option>
+        </select>
+      </label>
+      <label>📚 Chapter
+        <select id="qsChapter">
+          <option value="all">सभी Chapters</option>
+        </select>
+      </label>
+      <label>🔢 Questions
+        <select id="qsLimit">
+          <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5" selected>5</option>
+        </select>
+      </label>
+      <label class="qs-search-label">🔎 Search Question
+        <input id="qsSearch" type="search" placeholder="Question ID या प्रश्न खोजें...">
+      </label>
+    </div>
+
+    <div id="questionSelectionStatus" class="selection-status">Questions लोड हो रहे हैं...</div>
+    <div id="availableQuestions" class="available-questions"></div>
+
+    <div class="selected-question-bar">
+      <div><b>Selected Questions:</b> <span id="selectedQuestionCountBottom">0</span></div>
+      <div class="button-row">
+        <button id="clearQuestionSelectionBtn" type="button" class="secondary-btn">🗑️ Clear Selection</button>
+        <button id="saveQuestionSelectionBtn" type="button" class="secondary-btn">💾 Save Selection</button>
+        <button id="continueToContentBtn" type="button" class="primary-btn">➡️ Continue to Content Creation</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>📊 Question Pool Status</h2>
+    <div id="poolStatus" class="pool-grid-wrap"></div>
+  </section>
+
+  <section class="panel requirement-panel">
+    <div class="section-title-row">
+      <div>
+        <h2>🎯 आज का Content Requirement</h2>
+        <p class="section-help">जिस content की जितनी जरूरत हो, उतनी quantity चुनें। 0 का मतलब उस content की आज जरूरत नहीं है।</p>
+      </div>
+    </div>
+
+    <div class="plan-controls">
+      <label>Start Date<input id="startDate" type="date"></label>
+      <label>Days
+        <select id="days">
+          <option value="1" selected>1 Day</option>
+          <option value="2">2 Days</option>
+          <option value="3">3 Days</option>
+          <option value="4">4 Days</option>
+          <option value="5">5 Days</option>
+          <option value="6">6 Days</option>
+          <option value="7">7 Days</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="class-requirements">
+      <article class="requirement-class-card">
+        <div class="requirement-class-head">
+          <div><strong>📘 Class 9</strong><span>कक्षा 9 के लिए</span></div>
+          <button type="button" class="select-all-btn" data-class="9">Clear</button>
+        </div>
+        <div class="requirement-grid">
+          <label class="requirement-item"><span>📱 Post</span><select data-class="9" data-type="post" class="content-count"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label>
+          <label class="requirement-item"><span>🖼️ Image</span><select data-class="9" data-type="image" class="content-count"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label>
+          <label class="requirement-item"><span>🎬 Reel / Video</span><select data-class="9" data-type="video" class="content-count"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label>
+          <label class="requirement-item"><span>🖼️ Thumbnail</span><select data-class="9" data-type="thumbnail" class="content-count"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label>
+        </div>
+      </article>
+
+      <article class="requirement-class-card">
+        <div class="requirement-class-head">
+          <div><strong>📗 Class 10</strong><span>कक्षा 10 के लिए</span></div>
+          <button type="button" class="select-all-btn" data-class="10">Clear</button>
+        </div>
+        <div class="requirement-grid">
+          <label class="requirement-item"><span>📱 Post</span><select data-class="10" data-type="post" class="content-count"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label>
+          <label class="requirement-item"><span>🖼️ Image</span><select data-class="10" data-type="image" class="content-count"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label>
+          <label class="requirement-item"><span>🎬 Reel / Video</span><select data-class="10" data-type="video" class="content-count"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label>
+          <label class="requirement-item"><span>🖼️ Thumbnail</span><select data-class="10" data-type="thumbnail" class="content-count"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label>
+        </div>
+      </article>
+    </div>
+
+    <div class="common-content-option">
+      <label><input id="allowQuestionReuse" type="checkbox" checked> जरूरत होने पर एक ही Question को अलग content types में reuse करने दें</label>
+    </div>
+
+    <div class="button-row">
+      <button id="generateBtn" class="primary-btn" type="button">🚀 Generate Content Plan</button>
+    </div>
+    <div id="requirementSummary" class="requirement-summary"></div>
+    <div id="notice" class="notice" hidden></div>
+    <div id="planSummary" class="plan-summary"></div>
+
+    <div class="panel" style="margin-top:14px;padding:16px;background:#f8fafc;border:1px solid #e5e7eb;">
+      <div class="section-title-row">
+        <div>
+          <h3 style="margin:0;">📚 Previous Content Plans</h3>
+          <p class="section-help">इस browser में पहले save किए गए Plans यहाँ दिखेंगे। <b>Open Plan</b> से पूरा पुराना Plan वापस load करें।</p>
+        </div>
+        <button type="button" id="refreshPreviousPlansBtn" class="secondary-btn">🔄 Refresh</button>
+      </div>
+      <div id="previousPlansList" style="margin-top:12px;">पुराने Plans लोड हो रहे हैं...</div>
+    </div>
+  </section>
+
+  
+
+  <section class="panel prompt-center-panel">
+    <div class="section-title-row">
+      <div>
+        <h2>📋 Prompt Center</h2>
+        <p class="section-help">एक ही Saved Master Prompt सभी content types के लिए इस्तेमाल होगा। Current Plan के Questions और content types system अपने-आप manage करेगा।</p>
+      </div>
+    </div>
+    <div class="prompt-rules">
+      <div>🧠 <b>One Master Prompt</b> — Admin Panel में saved एक ही Master Prompt</div>
+      <div>⚡ <b>Generate All Prompts</b> — Current Plan के सभी Questions के लिए अपने-आप context जोड़ेगा</div>
+      <div>📦 <b>Download Prompt Pack</b> — तैयार prompts एक text file में</div>
+    </div>
+    <div class="centralized-prompt-actions" style="display:flex;gap:10px;margin-top:12px;">
+      <button type="button" id="generateAllPromptsBtn" class="primary-btn">⚡ Generate All Prompts</button>
+      <button type="button" id="generateVideoPromptsBtn" class="primary-btn">🎬 Generate Video Prompts</button>
+      <button type="button" id="downloadPromptPackBtn" class="secondary-btn" disabled>📦 Download Prompt Pack</button>
+      <button type="button" id="downloadVideoPromptsBtn" class="secondary-btn" disabled>🎬 Download Video Prompts</button>
+    </div>
+    <div id="promptGenerationStatus" class="prompt-central-note" style="margin-top:10px;">अभी prompts generate नहीं हुए हैं।</div>
+    <div id="videoPromptGenerationStatus" class="prompt-central-note" style="margin-top:8px;">Video prompts अभी generate नहीं हुए हैं।</div>
+    <div id="videoPromptList" style="margin-top:10px;"></div>
+    <textarea id="generatedPromptPack" style="position:absolute;left:-99999px;width:1px;height:1px;opacity:0;" aria-hidden="true"></textarea>
+  </section>
+
+  <section class="panel platform-panel">
+    <div class="section-title-row">
+      <div>
+        <h2>🌐 Platform Publishing</h2>
+        <p class="section-help">एक ही planning workflow सभी platforms के लिए रहेगा।</p>
+      </div>
+    </div>
+    <div class="platform-grid">
+      <article class="platform-card facebook active"><div class="platform-icon">📘</div><div><strong>Facebook</strong><span>Connected • Real Publishing</span></div><b>ACTIVE</b></article>
+      <article class="platform-card instagram"><div class="platform-icon">📸</div><div><strong>Instagram</strong><span id="cpInstagramPlatformText">Checking connection…</span></div><b id="cpInstagramPlatformState">CHECKING</b></article>
+      <article class="platform-card youtube"><div class="platform-icon">▶️</div><div><strong>YouTube</strong><span id="cpYouTubePlatformText">Checking connection…</span></div><b id="cpYouTubePlatformState">CHECKING</b></article>
+      <article class="platform-card whatsapp"><div class="platform-icon">🟢</div><div><strong>WhatsApp Channel</strong><span id="cpWhatsAppPlatformText">Checking channel…</span></div><b id="cpWhatsAppPlatformState">CHECKING</b></article>
+    </div>
+    <div class="zip-upload-box">
+      <div><strong>📦 Upload Content ZIP</strong><span>एक ZIP में तैयार assets upload करें। सामान्य स्थिति में Current Plan अपने-आप लिया जाएगा।</span></div>
+      <div style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin:10px 0;">
+        <label style="min-width:280px;flex:1;">Optional Plan ID
+          <input id="assetPlanId" type="text" placeholder="जरूरत हो तभी पुराना Plan ID डालें">
+        </label>
+        <button type="button" id="loadAssetPlanBtn" class="secondary-btn">↩️ Load Plan</button>
+      </div>
+      <input id="contentZip" type="file" accept=".zip">
+      <div id="zipImportStatus" class="zip-import-status">ZIP अभी select नहीं किया गया है।</div>
+      <div id="zipAssetSummary" class="zip-asset-summary"></div>
+    </div>
+
+    <div class="zip-upload-box" style="margin-top:12px;">
+      <div><strong>🎬 Upload Video Files</strong><span>वीडियो ZIP में डालने की जरूरत नहीं। एक साथ कई MP4 चुनें। Filename में Question ID होना चाहिए, जैसे Q900_Class9_Day1_Video.mp4</span></div>
+      <label for="videoFiles" class="primary-btn" style="display:inline-flex;cursor:pointer;align-items:center;gap:8px;margin-top:8px;">🎬 Select MP4 Video Files</label>
+      <input id="videoFiles" type="file" accept="video/mp4,video/*" multiple style="display:none;">
+      <div id="videoUploadStatus" class="zip-import-status">अभी कोई video select नहीं किया गया है।</div>
+      <div id="videoAssetSummary" class="zip-asset-summary"></div>
+    </div>
+
+    <div id="reviewPublishPanel" class="review-publish-panel">
+      <div class="section-title-row">
+        <div>
+          <h2>🚀 Review &amp; Publish</h2>
+          <p class="section-help">Content Planning के बाद final publishing यहीं से होगी। Scheduling भी इसी stage पर होगी।</p>
+        </div>
+      </div>
+      <div class="publish-controls">
+        <label>Publish Mode
+          <select id="publishMode">
+            <option value="now">Publish Now</option>
+            <option value="scheduled">Schedule</option>
+          </select>
+        </label>
+        <label id="publishDateTimeWrap" hidden>Publish Date &amp; Time
+          <input id="publishDateTime" type="datetime-local">
+        </label>
+        <button id="reviewPublishBtn" type="button" class="primary-btn">🚀 Review Ready Content</button>
+      </div>
+      <div id="publishReadiness" class="publish-readiness"></div>
+      <div id="publishPlatformSummary" class="publish-platform-summary"></div>
+      <div id="publishActionArea" class="publish-action-area"></div>
+      <div id="publishPlatformPreviews" class="publish-platform-previews"></div>
+      <div id="centralAutoPublishArea" class="central-auto-publish-area" style="margin-top:14px;"></div>
+      <div class="publish-note">
+        <b>महत्वपूर्ण:</b> Missing image/video किसी दूसरे available platform को block नहीं करेगा। WhatsApp Channel में direct auto-publish नहीं है; वहाँ package तैयार करके channel पर manual post किया जाएगा।
+      </div>
+    </div>
+
+  </section>
+
+  <section class="panel">
+    <div class="filters">
+      <label>Days<select id="dayFilter"><option value="all">सभी Days</option></select></label>
+      <label>Classes<select id="classFilter"><option value="all">सभी Classes</option><option value="9">Class 9</option><option value="10">Class 10</option></select></label>
+      <label>Content Type<select id="typeFilter"><option value="all">सभी Content Types</option><option value="image">🖼️ Image</option><option value="post">📱 Post</option><option value="video">🎬 Video</option><option value="thumbnail">🖼️ Thumbnail</option></select></label>
+    </div>
+    <div id="planResults"><div class="empty-box">अभी कोई Plan generate नहीं हुआ है।</div></div>
+  </section>
+
+  <section class="panel analytics-preview">
+    <h2>📊 Content Performance & SEO Analytics</h2>
+    <p class="section-help">अगले चरण में उपलब्ध platform metrics के आधार पर Reach, Engagement, Content और SEO सुधार के संकेत यहाँ दिखेंगे।</p>
+    <div class="analytics-cards">
+      <div><span>Published</span><strong>—</strong></div>
+      <div><span>Reach</span><strong>—</strong></div>
+      <div><span>Engagement</span><strong>—</strong></div>
+      <div><span>SEO Review</span><strong>Coming</strong></div>
+    </div>
+  </section>
+
+<section id="contentPlanningFacebook" class="cp-facebook-card">
+  <div>
+    <h3>📘 Facebook Page</h3>
+    <div id="cpFacebookConnectionStatus">Not connected</div>
+    <small id="cpFacebookPageName"></small>
+  </div>
+  <button type="button" id="cpConnectFacebookBtn">Connect Facebook Page</button>
+  <div id="cpFacebookMessage"></div>
+</section>
+
+<section id="contentPlanningInstagram" class="cp-facebook-card cp-instagram-card">
+  <div>
+    <h3>📸 Instagram Account</h3>
+    <div id="cpInstagramConnectionStatus">Not connected</div>
+    <small id="cpInstagramAccountName"></small>
+  </div>
+  <button type="button" id="cpConnectInstagramBtn">Connect Instagram</button>
+  <div id="cpInstagramMessage"></div>
+</section>
+
+
+<section id="contentPlanningYouTube" class="cp-social-card cp-youtube-card">
+  <div>
+    <h3>▶️ YouTube Channel</h3>
+    <div id="cpYouTubeConnectionStatus">Not connected</div>
+    <small id="cpYouTubeAccountName"></small>
+  </div>
+  <button type="button" id="cpConnectYouTubeBtn">Connect YouTube</button>
+  <div id="cpYouTubeMessage"></div>
+</section>
+
+<section id="contentPlanningWhatsApp" class="cp-social-card cp-whatsapp-card">
+  <div>
+    <h3>📢 WhatsApp Channel</h3>
+    <div id="cpWhatsAppConnectionStatus">Not connected</div>
+    <small id="cpWhatsAppAccountName"></small>
+  </div>
+  <button type="button" id="cpConnectWhatsAppBtn">Add WhatsApp Channel</button>
+  <div id="cpWhatsAppMessage"></div>
+</section>
+
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="assets/js/content-planning.js?v=20260926-video-upload-plans-2"></script>
+<script src="assets/js/content-planning-facebook.js"></script>
+<script src="assets/js/content-planning-instagram.js"></script>
+<script src="assets/js/content-planning-youtube.js"></script>
+<script src="assets/js/content-planning-whatsapp.js"></script>
+</body>
+</html>

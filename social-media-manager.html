@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Social Media Manager | Ganit Setu Admin</title>
+<link rel="stylesheet" href="assets/css/social-media-manager.css">
+</head>
+<body>
+<main class="sm-page">
+<section class="panel media-creator">
+  <div class="section-head">
+    <div>
+      <p class="eyebrow">CONTENT STUDIO</p>
+      <h2>🖼️ Post Format</h2>
+      <p class="muted">Text, image या banner — एक ही जगह से तैयार करें।</p>
+    </div>
+    <span class="status-pill">READY</span>
+  </div>
+  <div class="format-grid" id="formatGrid">
+    <button type="button" class="format-card active" data-format="text"><span class="format-icon">✍️</span><b>Text Post</b><small>Simple text update</small></button>
+    <button type="button" class="format-card" data-format="image"><span class="format-icon">🖼️</span><b>Image Post</b><small>Upload image + caption</small></button>
+    <button type="button" class="format-card" data-format="banner"><span class="format-icon">🎨</span><b>Banner Post</b><small>Branded banner</small></button>
+    <button type="button" class="format-card" data-format="video"><span class="format-icon">🎬</span><b>Short Video</b><small>Next phase</small></button>
+  </div>
+
+  <div class="media-workspace">
+    <div class="media-upload-box" id="mediaUploadBox" hidden>
+      <div class="upload-icon">📤</div>
+      <h3 id="mediaUploadTitle">Image Post</h3>
+      <p id="mediaUploadHint">JPG, PNG या WebP image चुनें।</p>
+      <label class="upload-btn"><input type="file" id="mediaFile" accept="image/png,image/jpeg,image/webp" hidden>🖼️ Image चुनें</label>
+      <div id="mediaPreviewWrap" class="media-preview-wrap" hidden>
+        <img id="mediaPreview" alt="Post preview">
+        <button type="button" class="remove-media" id="removeMedia">✕ हटाएँ</button>
+      </div>
+    </div>
+
+    <div class="banner-tools" id="bannerTools" hidden>
+      <div class="template-row">
+        <button type="button" class="template-btn active" data-template="question">📐 आज का प्रश्न</button>
+        <button type="button" class="template-btn" data-template="trick">💡 Maths Trick</button>
+        <button type="button" class="template-btn" data-template="test">📝 Test Announcement</button>
+        <button type="button" class="template-btn" data-template="app">📱 App Update</button>
+      </div>
+      <div class="banner-form">
+        <input id="bannerTitle" type="text" placeholder="Banner heading — जैसे: आज का गणित प्रश्न">
+        <input id="bannerSubtitle" type="text" placeholder="छोटा subtitle / class / chapter">
+        <textarea id="bannerBody" rows="3" placeholder="मुख्य सवाल या जानकारी लिखें..."></textarea>
+        <button type="button" class="secondary-btn" id="buildBanner">🎨 Banner Preview बनाएं</button>
+      </div>
+      <div class="generated-banner" id="generatedBanner" hidden>
+        <canvas id="bannerCanvas" width="1200" height="630"></canvas>
+        <button type="button" class="secondary-btn" id="useBanner">✓ इस Banner को Post में लगाएं</button>
+      </div>
+    </div>
+
+    <div class="coming-video" id="videoTools" hidden>🎬 <b>Short Video / Reel</b><span>Video workflow अगले चरण में जोड़ा जाएगा।</span></div>
+  </div>
+</section>
+
+  <section class="ai-studio panel" id="aiStudio">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">AI CONTENT STUDIO</p>
+        <h2>🤖 आज की पोस्ट अपने-आप तैयार करें</h2>
+        <p class="muted">AI केवल draft बनाएगा। Publish करने से पहले आपकी approval जरूरी रहेगी।</p>
+      </div>
+      <span class="status-pill ai-safe">APPROVAL REQUIRED</span>
+    </div>
+    <div class="ai-grid">
+      <div class="ai-form-box">
+        <label>Post type
+          <select id="aiPostType">
+            <option value="question">📐 आज का गणित प्रश्न</option>
+            <option value="trick">💡 Maths Trick</option>
+            <option value="motivation">🎯 Maths Motivation</option>
+            <option value="test">📝 Test Reminder</option>
+            <option value="app">📱 Ganit Setu App Update</option>
+          </select>
+        </label>
+        <div class="ai-row">
+          <label>Class
+            <select id="aiClass"><option value="9">Class 9th</option><option value="10">Class 10th</option><option value="both" selected>Class 9th & 10th</option></select>
+          </label>
+          <label>Language
+            <select id="aiLanguage"><option value="hi" selected>Hindi</option><option value="hinglish">Hinglish</option><option value="en">English</option></select>
+          </label>
+        </div>
+        <label>Topic / instruction <span class="optional">(optional)</span>
+          <input id="aiTopic" type="text" placeholder="जैसे: त्रिभुज, प्रतिशत, बीजगणित...">
+        </label>
+        <button type="button" id="generateAiBtn" class="ai-generate-btn">✨ AI Draft Generate करें</button>
+        <small class="ai-note">🔐 AI key browser में नहीं रखी जाएगी। Secure Edge Function के माध्यम से request जाएगी।</small>
+      </div>
+      <div class="ai-result-box">
+        <div class="ai-result-head"><b>Generated Draft</b><span id="aiStatus" class="ai-status">READY</span></div>
+        <textarea id="aiGeneratedText" rows="11" placeholder="AI से तैयार draft यहाँ दिखाई देगा..." readonly></textarea>
+        <div class="ai-result-actions">
+          <button type="button" id="useAiDraftBtn" class="secondary" disabled>✓ Post में लगाएँ</button>
+          <button type="button" id="clearAiBtn" class="secondary">✕ Clear</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="ai-image-studio panel" id="aiImageStudio">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">AI IMAGE STUDIO</p>
+        <h2>🖼️ Colorful Maths Poster बनाएं</h2>
+        <p class="muted">Cloudflare FLUX से colourful motivational, maths trick, concept और educational poster बनाएं।</p>
+      </div>
+      <span class="status-pill ai-image-safe">APPROVAL REQUIRED</span>
+    </div>
+
+    <div class="ai-image-grid">
+      <div class="ai-image-form-box">
+        <label>Image type
+          <select id="aiImageType">
+            <option value="maths_motivation">💡 Maths Motivation</option>
+            <option value="maths_trick">🧮 Maths Trick</option>
+            <option value="concept">📐 Concept Explainer</option>
+            <option value="formula">📚 Formula Poster</option>
+            <option value="exam_tips">🎯 Exam Tips</option>
+            <option value="chapter_poster">📖 Chapter Poster</option>
+            <option value="daily_question">❓ Daily Question</option>
+            <option value="study_motivation">🔥 Study Motivation</option>
+            <option value="app_update">📱 Ganit Setu App Update</option>
+          </select>
+        </label>
+
+        <div class="ai-row">
+          <label>Class
+            <select id="aiImageClass">
+              <option value="9">Class 9th</option>
+              <option value="10">Class 10th</option>
+              <option value="both" selected>Class 9th &amp; 10th</option>
+            </select>
+          </label>
+
+          <label>Language
+            <select id="aiImageLanguage">
+              <option value="hi" selected>Hindi</option>
+              <option value="hinglish">Hinglish</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="ai-row">
+          <label>Image size
+            <select id="aiImageAspect">
+              <option value="1:1" selected>Square 1:1 — Instagram / Facebook</option>
+              <option value="4:5">Portrait 4:5 — Feed Post</option>
+              <option value="9:16">Vertical 9:16 — Story / Status</option>
+              <option value="16:9">Landscape 16:9 — YouTube</option>
+            </select>
+          </label>
+
+          <label>Design style
+            <select id="aiImageStyle">
+              <option value="colorful_educational">Colorful Educational</option>
+              <option value="modern_premium">Modern Premium</option>
+              <option value="clean_white_template" selected>Clean White Template</option>
+              <option value="student_friendly">Student Friendly</option>
+            </select>
+          </label>
+        </div>
+
+        <label>Topic / instruction <span class="optional">(optional)</span>
+          <input id="aiImageTopic" type="text" placeholder="जैसे: त्रिभुज, प्रतिशत, बीजगणित...">
+        </label>
+
+        <label class="verified-content-label">Verified Poster Content <span class="optional">(यही text final poster में बिल्कुल इसी रूप में रखा जाएगा)</span>
+          <textarea id="aiImageVerifiedContent" rows="8" placeholder="उदाहरण:
+त्रिभुज का क्षेत्रफल
+
+= 1/2 × आधार × ऊँचाई
+
+आधार = 10 cm
+ऊँचाई = 8 cm
+
+क्षेत्रफल = 40 cm²"></textarea>
+        </label>
+        <div class="fixed-content-note">📌 <b>Fixed Content Area:</b> Final poster में verified content के लिए एक तय सफेद area रहेगा। Text उसी area में automatic wrap और sizing के साथ लगेगा।</div>
+
+        <label>Caption <span class="optional">(optional)</span>
+          <textarea id="aiImageCaption" rows="3" placeholder="Image के साथ social media पर जाने वाला छोटा caption..."></textarea>
+        </label>
+
+        <button type="button" id="generateAiImageBtn" class="ai-image-generate-btn">✨ AI Image Generate करें</button>
+        <small class="ai-note">🔐 Image generation secure Cloudflare Edge Function से होगी। AI अपने-आप publish नहीं करेगा।</small>
+      </div>
+
+      <div class="ai-image-result-box">
+        <div class="ai-result-head">
+          <b>Generated Image</b>
+          <span id="aiImageStatus" class="ai-status">READY</span>
+        </div>
+
+        <div id="aiImagePreviewBox" class="ai-image-preview-box">
+          <div class="ai-image-placeholder">
+            <div>🖼️</div>
+            <span>आपकी colorful Ganit Setu image यहाँ दिखाई देगी।</span>
+          </div>
+        </div>
+
+        <div class="ai-result-actions">
+          <button type="button" id="useAiImageBtn" class="secondary" disabled>✓ Image को Post में लगाएँ</button>
+          <button type="button" id="clearAiImageBtn" class="secondary">✕ Clear</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="security-panel panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">SECURITY</p>
+        <h2>🔐 Social Publishing Security</h2>
+        <p class="muted">Sensitive keys और publishing permissions को browser से अलग रखा जाएगा।</p>
+      </div>
+      <span class="status-pill security-badge">SECURE DESIGN</span>
+    </div>
+    <div class="security-grid">
+      <div><b>🔑 Secrets</b><span>Server / Edge Function only</span></div>
+      <div><b>👤 Approval</b><span>AI direct publish नहीं करेगा</span></div>
+      <div><b>🛡️ OAuth</b><span>Platform authorization required</span></div>
+      <div><b>📋 Audit</b><span>Publish / schedule actions logged</span></div>
+    </div>
+  </section>
+
+  <header class="sm-header">
+    <div>
+      <div class="eyebrow">GANIT SETU ADMIN</div>
+      <h1>📱 Social Media Manager</h1>
+      <p>YouTube • Facebook • WhatsApp • Instagram</p>
+    </div>
+    <a class="back-link" href="dashboard.html">← Dashboard</a>
+  </header>
+
+  <section class="platform-grid">
+    <article class="platform-card"><span>▶️</span><div><b>YouTube</b><small>Connected profile</small></div><em>Link saved</em></article>
+    <article class="platform-card"><span>📘</span><div><b>Facebook</b><small>Connected Page</small></div><em>Link saved</em></article>
+    <article class="platform-card"><span>📢</span><div><b>WhatsApp</b><small>Channel</small></div><em>Link saved</em></article>
+    <article class="platform-card"><span>📸</span><div><b>Instagram</b><small>Connected profile</small></div><em>Link saved</em></article>
+  </section>
+
+  <section class="composer">
+    <div class="section-title"><h2>✍️ Create Post</h2><span class="draft-badge">DRAFT</span></div>
+    <label>Post text
+      <textarea id="postText" rows="7" placeholder="आज का Maths question, learning tip, announcement या app update लिखें..."></textarea>
+    </label>
+
+    <div class="targets">
+      <h3>Publish to</h3>
+      <div class="checks">
+        <label><input type="checkbox" value="youtube" checked> ▶️ YouTube</label>
+        <label><input type="checkbox" value="facebook" checked> 📘 Facebook</label>
+        <label><input type="checkbox" value="whatsapp" checked> 📢 WhatsApp</label>
+        <label><input type="checkbox" value="instagram" checked> 📸 Instagram</label>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="previewBtn" class="secondary">👀 Preview</button>
+      <button id="saveDraftBtn" class="secondary">💾 Save Draft</button>
+      <button id="approveBtn" class="primary">✅ Approve</button>
+    </div>
+  </section>
+
+  <section class="preview-card" id="previewCard" hidden>
+    <div class="section-title"><h2>Preview</h2><span id="previewStatus" class="status-badge">Draft</span></div>
+    <div id="previewContent" class="preview-content"></div>
+    <div class="preview-meta"><span id="previewTargets"></span><span id="previewTime"></span></div>
+    <div class="publish-note">ℹ️ अभी यह approval workflow है। Actual social-platform publishing API connection अगले चरण में जोड़ी जाएगी।</div>
+  </section>
+
+
+  <section class="publish-panel panel" id="publishPanel" hidden>
+    <div class="section-title">
+      <div>
+        <h2>🚀 Publish / Schedule</h2>
+        <p class="publish-subtitle">Approved post को अभी publish करें या future date/time के लिए schedule करें।</p>
+      </div>
+      <span class="status-badge ready-badge">APPROVED</span>
+    </div>
+
+    <div class="publish-grid">
+      <div class="publish-mode-box">
+        <h3>Action चुनें</h3>
+        <div class="mode-buttons">
+          <button type="button" class="mode-btn active" data-mode="now">🚀 Publish Now</button>
+          <button type="button" class="mode-btn" data-mode="schedule">🗓️ Schedule</button>
+        </div>
+        <div id="scheduleFields" class="schedule-fields" hidden>
+          <label>Publish Date
+            <input type="date" id="scheduleDate">
+          </label>
+          <label>Publish Time
+            <input type="time" id="scheduleTime">
+          </label>
+        </div>
+      </div>
+
+      <div class="api-status-box">
+        <h3>Platform Status</h3>
+        <div class="api-status-list">
+          <div><span>▶️ YouTube</span><b>API Not Connected</b></div>
+          <div><span>📘 Facebook</span><b>API Not Connected</b></div>
+          <div><span>📸 Instagram</span><b>API Not Connected</b></div>
+          <div><span>📢 WhatsApp Channel</span><b>API Not Connected</b></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="publish-actions">
+      <button type="button" id="cancelPublishBtn" class="secondary">✕ Cancel</button>
+      <button type="button" id="publishNowBtn" class="publish-btn">🚀 Publish Now</button>
+    </div>
+    <div class="api-warning">🔐 <b>महत्वपूर्ण:</b> अभी social platform API/OAuth connection नहीं जोड़ा गया है। इसलिए यह button post को गलत तरीके से “Published” नहीं दिखाएगा। API connection के बाद यही workflow वास्तविक publishing करेगा।</div>
+  </section>
+
+  <section class="post-history panel">
+    <div class="section-title">
+      <h2>📋 Post History</h2>
+      <span class="draft-badge">MANAGE POSTS</span>
+    </div>
+    <p class="history-help">आपकी बनाई हुई पोस्ट यहाँ दिखाई देंगी। Edit, Duplicate और Delete विकल्प उपलब्ध हैं।</p>
+    <div id="postHistoryList" class="post-history-list"></div>
+  </section>
+
+  <section class="workflow">
+    <h2>🔄 Workflow</h2>
+    <div class="steps">
+      <div><b>1</b><span>Create</span></div><div><b>2</b><span>Preview</span></div>
+      <div><b>3</b><span>Approve</span></div><div><b>4</b><span>Publish / Schedule</span></div>
+    </div>
+  </section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>window.gsSupabaseClient = window.supabase?.createClient("https://cbgojvnbkosdehvwerth.supabase.co", "sb_publishable_a5XOePzNSNn72WQm_xrIAQ_cj5Z01W_");</script>
+<script src="assets/js/social-media-manager.js"></script>
+<script src="assets/js/social-publishing-db-bridge.js"></script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Ganit Setu Facebook Connecting</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+  <p style="font-family:Arial,sans-serif;text-align:center;margin-top:60px;">
+    Facebook connection पूरा किया जा रहा है…
+  </p>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const params = new URLSearchParams(
+        window.location.search
+      );
+
+      const code =
+        params.get('code');
+
+      const state =
+        params.get('state');
+
+      const error =
+        params.get('error');
+
+      const errorDescription =
+        params.get('error_description');
+
+      /*
+       * Facebook से वापस आने के बाद
+       * इसी browser tab में Content Planning पर जाएँ।
+       */
+
+      const target = new URL(
+        'content-planning.html',
+        window.location.href
+      );
+
+      if (code) {
+        target.searchParams.set(
+          'facebook_code',
+          code
+        );
+      }
+
+      if (state) {
+        target.searchParams.set(
+          'facebook_state',
+          state
+        );
+      }
+
+      if (error) {
+        target.searchParams.set(
+          'facebook_error',
+          error
+        );
+      }
+
+      if (errorDescription) {
+        target.searchParams.set(
+          'facebook_error_description',
+          errorDescription
+        );
+      }
+
+      /*
+       * Same-tab redirect.
+       * कोई popup, opener या window.close नहीं।
+       */
+      window.location.replace(
+        target.toString()
+      );
+
+    })();
+  </script>
+</body>
+</html>
