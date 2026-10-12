@@ -377,7 +377,16 @@ async function init(){
   if(!window.supabase){alert('Supabase library load नहीं हुई।');return;}
   sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
   const {data:{session}}=await sb.auth.getSession();
-  if(!session){location.href='index.html';return;}
+  // Opening this workspace must not redirect to Home merely because no admin session exists.
+  // Database writes and protected RPCs may still require an authorized session.
+  if(!session){
+    const note=document.createElement('div');
+    note.id='vsmSessionNotice';
+    note.style.cssText='margin:12px 0;padding:10px 12px;border:1px solid #f59e0b;border-radius:10px;background:#fffbeb;color:#92400e;font-size:13px';
+    note.textContent='Workspace खुल गया है। अभी Admin session नहीं है; Supabase से प्रश्न लोड करने या सुरक्षित बदलाव करने पर अनुमति की त्रुटि आ सकती है।';
+    const main=document.querySelector('main');
+    if(main) main.prepend(note);
+  }
 
   document.getElementById('batchGenerateBtn').addEventListener('click',loadQuestions);
   installQuickPreviewStyles();
