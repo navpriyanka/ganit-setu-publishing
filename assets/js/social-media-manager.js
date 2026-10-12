@@ -207,13 +207,13 @@
   const clearBtn = $("clearAiBtn");
 
   const AI_FUNCTION_URL =
-    "https://iaefrigvgifzttmfswaz.supabase.co/functions/v1/gemini-generate-post";
+    "https://ucovgluwsiejrhjweuls.supabase.co/functions/v1/gemini-generate-post";
 
   const SUPABASE_URL =
-    "https://iaefrigvgifzttmfswaz.supabase.co";
+    "https://ucovgluwsiejrhjweuls.supabase.co";
 
   const SUPABASE_ANON_KEY =
-    "sb_publishable_02LxZ1tEEzcqobT3wtFeFQ_FkaQMSNw";
+    "sb_publishable_1XHxsjb_vNK8BYHHGiIYeQ__ouET5_Q";
 
   function setStatus(label, type = "") {
     if (!status) return;
@@ -540,13 +540,13 @@
   const previewBox = $("aiImagePreviewBox");
 
   const IMAGE_FUNCTION_URL =
-    "https://iaefrigvgifzttmfswaz.supabase.co/functions/v1/cloudflare-generate-image";
+    "https://ucovgluwsiejrhjweuls.supabase.co/functions/v1/cloudflare-generate-image";
 
   const SUPABASE_URL =
-    "https://iaefrigvgifzttmfswaz.supabase.co";
+    "https://ucovgluwsiejrhjweuls.supabase.co";
 
   const SUPABASE_ANON_KEY =
-    "sb_publishable_02LxZ1tEEzcqobT3wtFeFQ_FkaQMSNw";
+    "sb_publishable_1XHxsjb_vNK8BYHHGiIYeQ__ouET5_Q";
 
   const LOGO_URL = "assets/images/Ganit-Setu-Logo-FINAL-Transparent.png";
   let generatedImage = "";

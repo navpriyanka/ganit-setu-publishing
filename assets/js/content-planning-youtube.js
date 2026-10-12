@@ -9,7 +9,7 @@
   'use strict';
 
   const SUPABASE_URL =
-    'https://iaefrigvgifzttmfswaz.supabase.co';
+    'https://ucovgluwsiejrhjweuls.supabase.co';
 
   const FUNCTION_URL =
     SUPABASE_URL + '/functions/v1/youtube-connect';
@@ -18,7 +18,7 @@
     'youtube_accounts';
 
   const PUBLISHABLE_KEY =
-    'sb_publishable_02LxZ1tEEzcqobT3wtFeFQ_FkaQMSNw';
+    'sb_publishable_1XHxsjb_vNK8BYHHGiIYeQ__ouET5_Q';
 
   const $ = id =>
     document.getElementById(id);

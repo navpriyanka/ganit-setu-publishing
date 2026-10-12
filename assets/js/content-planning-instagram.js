@@ -5,10 +5,10 @@
 (() => {
   'use strict';
 
-  const SUPABASE_URL = 'https://iaefrigvgifzttmfswaz.supabase.co';
+  const SUPABASE_URL = 'https://ucovgluwsiejrhjweuls.supabase.co';
   const FUNCTION_URL = SUPABASE_URL + '/functions/v1/instagram-connect';
   const CONNECTIONS_TABLE = 'social_accounts';
-  const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_02LxZ1tEEzcqobT3wtFeFQ_FkaQMSNw';
+  const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_1XHxsjb_vNK8BYHHGiIYeQ__ouET5_Q';
 
   function getClient() {
     return window.supabaseClient || window.gsSupabaseClient || null;
