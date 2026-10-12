@@ -81,23 +81,17 @@ async function init() {
     return;
   }
 
-  // This workspace is designed to open without a website login.
-  // Keep the page available when no Supabase Auth session exists; protected
-  // server actions may still require authentication and should report that
-  // requirement at the point of use instead of redirecting to the home page.
-  try {
-    const { data: { session }, error: sessionError } = await authClient.auth.getSession();
-    if (sessionError) console.warn('Supabase session unavailable; opening workspace in limited mode:', sessionError.message);
-    if (!session) {
-      const notice = $('#notice');
-      if (notice) {
-        notice.hidden = false;
-        notice.className = 'notice';
-        notice.textContent = 'Workspace खुल गया है। सुरक्षित publishing/server actions के लिए Supabase Admin session आवश्यक हो सकती है।';
-      }
-    }
-  } catch (sessionError) {
-    console.warn('Supabase session check failed; opening workspace in limited mode:', sessionError);
+  const { data: { session }, error: sessionError } = await authClient.auth.getSession();
+  if (sessionError) {
+    console.error('Session error:', sessionError);
+    alert('Admin session पढ़ी नहीं जा सकी।');
+    return;
+  }
+  // This workspace is allowed to open without an Admin login.
+  // Actions that call protected Edge Functions still require a valid session
+  // and will report their own authentication error when invoked.
+  if (!session) {
+    console.info('Content Day Planning opened without an Admin session; protected publishing actions may require login.');
   }
 
   const start = $('#startDate');
