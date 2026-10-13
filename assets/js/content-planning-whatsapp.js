@@ -574,12 +574,11 @@
           'click',
           function(event) {
 
-            event.preventDefault();
+                   event.preventDefault();
+          event.stopPropagation();
+          event.stopImmediatePropagation();
 
-            event.stopPropagation();
-
-            openChannel();
-
+          openChannel();
           },
           true
         );
