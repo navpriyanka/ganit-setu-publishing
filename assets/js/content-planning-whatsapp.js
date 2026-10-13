@@ -696,18 +696,19 @@
         'button';
 
       connectBtn.addEventListener(
-        'click',
-        function(event) {
+  'click',
+  function(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
 
-          event.preventDefault();
-
-          event.stopPropagation();
-
-          connect();
-
-        },
-        true
-      );
+    window.open(
+      CHANNEL_URL,
+      '_blank'
+    );
+  },
+  true
+);
     }
 
     injectStyle();
