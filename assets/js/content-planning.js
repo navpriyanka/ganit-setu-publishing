@@ -39,6 +39,8 @@ const $ = (s) => document.querySelector(s);
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({
   '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
 }[c]));
+const questionIdKey = (v) => String(v ?? '').trim();
+const questionIdLabel = (v) => { const id = questionIdKey(v); return /^q/i.test(id) ? id : questionIdLabel(id); };
 
 let currentPlan = [];
 let currentPlanId = null;
@@ -207,8 +209,8 @@ async function loadQuestionSelection() {
       try {
         const parsed = JSON.parse(saved);
         if (Number(parsed.class_level) === cls && Array.isArray(parsed.question_ids)) {
-          const validIds = new Set(questionSelectionRows.map(q => Number(q.id)));
-          selectedQuestionIds = new Set(parsed.question_ids.map(Number).filter(id => validIds.has(id)).slice(0,5));
+          const validIds = new Set(questionSelectionRows.map(q => questionIdKey(q.id)));
+          selectedQuestionIds = new Set(parsed.question_ids.map(questionIdKey).filter(id => validIds.has(id)).slice(0,5));
         }
       } catch (_) {}
     }
@@ -259,14 +261,14 @@ function renderQuestionSelection() {
     return;
   }
   box.innerHTML = rows.map(q => {
-    const id = Number(q.id);
+    const id = questionIdKey(q.id);
     const selected = selectedQuestionIds.has(id);
     const safeText = esc(q.question_text || '');
     return `<div class="qs-question-row ${selected ? 'is-selected' : ''}" data-qrow="${id}">
-      <input class="qs-check" type="checkbox" data-qselect="${id}" ${selected ? 'checked' : ''} aria-label="Select Q${id}">
+      <input class="qs-check" type="checkbox" data-qselect="${id}" ${selected ? 'checked' : ''} aria-label="Select ${esc(questionIdLabel(id))}">
       <div class="qs-question-main">
         <div class="qs-question-meta">
-          <span class="qs-meta-pill">Q${id}</span>
+          <span class="qs-meta-pill">${esc(questionIdLabel(id))}</span>
           <span class="qs-meta-pill">Class ${esc(q.class_level)}</span>
           <span class="qs-meta-pill">Chapter ${esc(q.chapter_number ?? '—')}${q.chapter_name ? ` — ${esc(q.chapter_name)}` : ''}</span>
         </div>
@@ -276,8 +278,8 @@ function renderQuestionSelection() {
     </div>`;
   }).join('');
 
-  box.querySelectorAll('[data-qselect]').forEach(el => el.addEventListener('change', () => toggleQuestionSelection(Number(el.dataset.qselect))));
-  box.querySelectorAll('[data-qbutton]').forEach(el => el.addEventListener('click', () => toggleQuestionSelection(Number(el.dataset.qbutton))));
+  box.querySelectorAll('[data-qselect]').forEach(el => el.addEventListener('change', () => toggleQuestionSelection(questionIdKey(el.dataset.qselect))));
+  box.querySelectorAll('[data-qbutton]').forEach(el => el.addEventListener('click', () => toggleQuestionSelection(questionIdKey(el.dataset.qbutton))));
   updateQuestionSelectionUI();
 }
 
@@ -314,7 +316,7 @@ function saveQuestionSelection(showMessage = true) {
     saved_at: new Date().toISOString(),
     class_level: Number($('#qsClass')?.value || 9),
     chapter: String($('#qsChapter')?.value || 'all'),
-    question_ids: [...selectedQuestionIds].map(Number)
+    question_ids: [...selectedQuestionIds].map(questionIdKey)
   };
   localStorage.setItem('ganitSetuSelectedQuestions', JSON.stringify(payload));
   if (showMessage) setQuestionSelectionStatus(`${payload.question_ids.length} Questions की selection save हो गई।`, 'success');
@@ -336,7 +338,7 @@ function bindEvents() {
     document.getElementById(id)?.addEventListener('change', renderPlan);
   });
   $('#selectAllQuestionsBtn')?.addEventListener('click', () => {
-    [...new Set(currentPlan.map(x => Number(x.question_id)))].forEach(id => selectedQuestionIds.add(id));
+    [...new Set(currentPlan.map(x => questionIdKey(x.question_id)))].forEach(id => selectedQuestionIds.add(id));
   });
   $('#clearSelectedQuestionsBtn')?.addEventListener('click', () => {
   });
@@ -367,18 +369,27 @@ async function loadPoolStatus() {
     if (error) throw error;
 
     const rows = data || [];
-    box.innerHTML = rows.map(r => `
-      <div class="pool-card">
-        <div class="pool-title">📘 कक्षा ${r.class_level}</div>
+    const byClass = new Map(rows.map(r => [Number(r.class_level ?? r.class ?? r.classlevel), r]));
+    box.innerHTML = [9, 10].map(cls => {
+      const r = byClass.get(cls);
+      if (!r) return `<div class="pool-card"><div class="pool-title">📘 कक्षा ${cls}</div><div class="muted">Pool status RPC से इस कक्षा का विवरण नहीं मिला।</div></div>`;
+      const eligible = r.total_eligible ?? r.eligible_count ?? r.total_questions ?? r.eligible ?? '—';
+      const used = r.used_in_cycle ?? r.cycle_used ?? r.used_count ?? r.used ?? '—';
+      const remaining = r.remaining_in_cycle ?? r.remaining_count ?? r.remaining ?? '—';
+      const cycle = r.current_cycle ?? r.cycle_number ?? r.cycle ?? '—';
+      const from = r.chapter_from ?? r.chapter_start ?? r.chapter_number_from ?? '—';
+      const to = r.chapter_to ?? r.chapter_end ?? r.chapter_number_to ?? '—';
+      return `<div class="pool-card">
+        <div class="pool-title">📘 कक्षा ${cls}</div>
         <div class="pool-grid">
-          <div><small>कुल Eligible</small><strong>${r.total_eligible}</strong></div>
-          <div><small>Cycle में Used</small><strong>${r.used_in_cycle}</strong></div>
-          <div><small>शेष</small><strong>${r.remaining_in_cycle}</strong></div>
-          <div><small>Current Cycle</small><strong>${r.current_cycle}</strong></div>
+          <div><small>कुल Eligible</small><strong>${esc(eligible)}</strong></div>
+          <div><small>Cycle में Used</small><strong>${esc(used)}</strong></div>
+          <div><small>शेष</small><strong>${esc(remaining)}</strong></div>
+          <div><small>Current Cycle</small><strong>${esc(cycle)}</strong></div>
         </div>
-        <div class="pool-chapter">इस महीने: Chapter ${r.chapter_from}–${r.chapter_to}</div>
-      </div>
-    `).join('') || '<div class="muted">Pool status उपलब्ध नहीं है।</div>';
+        <div class="pool-chapter">इस महीने: Chapter ${esc(from)}–${esc(to)}</div>
+      </div>`;
+    }).join('');
   } catch (e) {
     box.innerHTML = `<div class="error-box">Pool status नहीं पढ़ा जा सका: ${esc(e.message)}</div>`;
   }
@@ -448,7 +459,7 @@ async function generatePlan() {
           plan_id: r.plan_id || currentPlanId || null,
           plan_day: Number(r.plan_day || 1),
           content_date: r.content_date || startDate || null,
-          question_id: Number(r.question_id),
+          question_id: questionIdKey(r.question_id),
           class_level: Number(r.class_level),
           chapter_number: r.chapter_number != null ? Number(r.chapter_number) : null,
           selection_order: Number(r.selection_order || 0),
@@ -517,13 +528,13 @@ function filteredRows() {
 
 async function fetchQuestions(ids) {
   if (!ids.length) return {};
-  const unique = [...new Set(ids.map(Number))];
+  const unique = [...new Set(ids.map(questionIdKey).filter(Boolean))];
   const { data, error } = await supabase
     .from('questions')
     .select('id,class_level,chapter_number,chapter_name,question_text,option_a,option_b,option_c,option_d,correct_option,explanation,hint')
     .in('id', unique);
   if (error) throw error;
-  return Object.fromEntries((data || []).map(q => [Number(q.id), q]));
+  return Object.fromEntries((data || []).map(q => [questionIdKey(q.id), q]));
 }
 
 async function renderPlan() {
@@ -563,7 +574,7 @@ async function renderPlan() {
             <h3>📘 कक्षा ${esc(cls)} <span>${rs.length} Questions</span></h3>
             <div class="question-grid">
               ${rs.sort((a,b)=>a.selection_order-b.selection_order).map((r,idx) => {
-                const q = qmap[Number(r.question_id)];
+                const q = qmap[questionIdKey(r.question_id)];
                 return questionCard(r,q,idx+1);
               }).join('')}
             </div>
@@ -572,7 +583,7 @@ async function renderPlan() {
       </section>`;
     }).join('');
     container.querySelectorAll('.question-select-checkbox').forEach(cb => cb.addEventListener('change', e => {
-      const id = Number(e.target.dataset.questionId);
+      const id = questionIdKey(e.target.dataset.questionId);
     }));
   } catch (e) {
     container.innerHTML = `<div class="error-box">
@@ -592,7 +603,7 @@ async function renderPlan() {
 const FACEBOOK_PUBLISH_FUNCTION = `${GS_SUPABASE_URL}/functions/v1/facebook-oauth`;
 
 function buildFacebookContent(r, q) {
-  if (!q) return { title: `Ganit Setu Q${r.question_id}`, caption: '', description: '', hashtags: '#GanitSetu #Maths #MPBoard' };
+  if (!q) return { title: `Ganit Setu ${questionIdLabel(r.question_id)}`, caption: '', description: '', hashtags: '#GanitSetu #Maths #MPBoard' };
   const title = `आज का गणित प्रश्न | कक्षा ${q.class_level} | अध्याय ${q.chapter_number}`;
   const caption = [
     `📘 GANIT SETU`,
@@ -665,7 +676,7 @@ async function publishQuestionToFacebook(r, q, button) {
     const payload = {
       action: 'publish',
       queue_id: existing?.id || null,
-      question_id: Number(r.question_id),
+      question_id: questionIdKey(r.question_id),
       plan_id: r.plan_id || currentPlanId || null,
       class_level: Number(r.class_level),
       platform: 'facebook',
@@ -826,7 +837,7 @@ async function publishQuestionToInstagram(r, q, button) {
       .replace(/\.+/g, '.');
 
     const path =
-      `instagram-test/${Date.now()}-Q${Number(r.question_id)}-${safeName}`;
+      `instagram-test/${Date.now()}-Q${questionIdKey(r.question_id)}-${safeName}`;
 
     const { error: uploadError } = await supabase.storage
       .from(INSTAGRAM_TEST_BUCKET)
@@ -858,7 +869,7 @@ async function publishQuestionToInstagram(r, q, button) {
       access_token: sessionData.session.access_token,
       media_url: mediaUrl,
       caption: buildInstagramCaption(q),
-      question_id: Number(r.question_id),
+      question_id: questionIdKey(r.question_id),
       plan_id: r.plan_id || currentPlanId || null,
       class_level: Number(r.class_level)
     };
@@ -1010,7 +1021,7 @@ async function publishQuestionToYouTube(r, q, button) {
       .replace(/\.+/g, '.');
 
     const path =
-      `youtube-content/${Date.now()}-Q${Number(r.question_id)}-${safeName}`;
+      `youtube-content/${Date.now()}-Q${questionIdKey(r.question_id)}-${safeName}`;
 
     const { error: uploadError } = await supabase.storage
       .from(YOUTUBE_UPLOAD_BUCKET)
@@ -1042,7 +1053,7 @@ async function publishQuestionToYouTube(r, q, button) {
       description: meta.description,
       tags: meta.tags,
       privacy_status: 'private',
-      question_id: Number(r.question_id),
+      question_id: questionIdKey(r.question_id),
       plan_id: r.plan_id || currentPlanId || null,
       class_level: Number(r.class_level)
     };
@@ -1126,7 +1137,7 @@ function questionCard(r,q,number) {
   ] : [];
 
   const full = q ? [
-    `Question ID: Q${q.id}`,
+    `Question ID: ${questionIdLabel(q.id)}`,
     `Class ${q.class_level} | Chapter ${q.chapter_number} — ${q.chapter_name}`,
     ``,
     q.question_text,
@@ -1137,7 +1148,7 @@ function questionCard(r,q,number) {
     `Correct Answer: ${q.correct_option}`,
     `Hint: ${q.hint || ''}`,
     `Explanation: ${q.explanation || ''}`
-  ].join('\n') : `Question ID: Q${r.question_id}\nChapter ${r.chapter_number} — ${r.chapter_name}`;
+  ].join('\n') : `Question ID: ${questionIdLabel(r.question_id)}\nChapter ${r.chapter_number} — ${r.chapter_name}`;
 
   return `<article class="question-card">
     <div class="q-top">
@@ -1146,7 +1157,7 @@ function questionCard(r,q,number) {
       <span class="chapter-badge">Chapter ${esc(r.chapter_number)}</span>
       <span class="cycle-badge">Cycle ${esc(r.cycle_number)}</span>
     </div>
-    <div class="q-title">Question ID: <b>Q${esc(r.question_id)}</b> <span>• ${esc(r.chapter_name)}</span></div>
+    <div class="q-title">Question ID: <b>${esc(questionIdLabel(r.question_id))}</b> <span>• ${esc(r.chapter_name)}</span></div>
     ${q ? `
       <div class="question-text">${esc(text)}</div>
       <div class="options">
@@ -1157,7 +1168,7 @@ function questionCard(r,q,number) {
         <div>💡 <b>Hint:</b> ${esc(q.hint || 'Hint उपलब्ध नहीं है।')}</div>
         <div>📖 <b>Explanation:</b> ${esc(q.explanation || 'Explanation उपलब्ध नहीं है।')}</div>
       </div>
-    ` : `<div class="missing-question">Question data नहीं मिला। Question ID: Q${esc(r.question_id)}</div>`}
+    ` : `<div class="missing-question">Question data नहीं मिला। Question ID: ${esc(questionIdLabel(r.question_id))}</div>`}
     <div class="prompt-actions centralized-prompt-actions">
       ${r.content_type === 'image' ? `<button type="button" class="prompt-btn image" data-prompt-kind="image" data-question-id="${esc(r.question_id)}">🖼️ Copy Image Prompt</button>` : ''}
       ${r.content_type === 'video' ? `<button type="button" class="prompt-btn video" data-prompt-kind="video" data-question-id="${esc(r.question_id)}">🎬 Copy Video Prompt</button>` : ''}
@@ -1170,7 +1181,7 @@ function questionCard(r,q,number) {
 function buildIndividualPrompt(kind, q) {
   if (!q) return '';
   const base = [
-    `Question ID: Q${q.id}`,
+    `Question ID: ${questionIdLabel(q.id)}`,
     `Class: ${q.class_level}`,
     `Chapter: ${q.chapter_number} — ${q.chapter_name || ''}`,
     `Question: ${q.question_text}`,
@@ -1194,7 +1205,7 @@ function buildIndividualPrompt(kind, q) {
 
 async function copyQuestionPrompt(kind, questionId, button) {
   try {
-    const q = (await fetchQuestions([questionId]))[Number(questionId)];
+    const q = (await fetchQuestions([questionId]))[questionIdKey(questionId)];
     if (!q) throw new Error('Question data नहीं मिला।');
     await navigator.clipboard.writeText(buildIndividualPrompt(kind, q));
     const old = button.textContent;
@@ -1227,7 +1238,7 @@ function buildCompleteImagePrompt(classLevel, classRows, qmap) {
       Number(a.selection_order || 0) - Number(b.selection_order || 0)
     )
     .forEach(r => {
-      const id = Number(r.question_id);
+      const id = questionIdKey(r.question_id);
       if (seen.has(id)) return;
       seen.add(id);
 
@@ -1254,7 +1265,7 @@ function buildCompleteImagePrompt(classLevel, classRows, qmap) {
 
   const questionData = questions.map((q, i) => `
 QUESTION ${String(i + 1).padStart(2,'0')}
-Question ID: Q${q.id}
+Question ID: ${questionIdLabel(q.id)}
 Class: ${q.classLevel}
 Chapter: ${q.chapterNumber} — ${q.chapterName}
 
@@ -1538,7 +1549,7 @@ function renderCompleteImagePromptButtons(rows, qmap) {
 
   box.innerHTML = classes.map(cls => {
     const uniqueCount = new Set(
-      rows.filter(r => Number(r.class_level) === cls).map(r => Number(r.question_id))
+      rows.filter(r => Number(r.class_level) === cls).map(r => questionIdKey(r.question_id))
     ).size;
 
     return `
@@ -1630,10 +1641,10 @@ document.addEventListener('click', async e => {
   const btn = e.target.closest('.publish-instagram');
   if (!btn) return;
 
-  const questionId = Number(btn.dataset.questionId);
+  const questionId = questionIdKey(btn.dataset.questionId);
   const contentType = btn.dataset.contentType;
   const row = currentPlan.find(
-    x => Number(x.question_id) === questionId &&
+    x => questionIdKey(x.question_id) === questionId &&
          x.content_type === contentType
   );
 
@@ -1655,11 +1666,11 @@ document.addEventListener('click', async (e) => {
   const btn = e.target.closest('.publish-youtube');
   if (!btn) return;
 
-  const questionId = Number(btn.dataset.questionId);
+  const questionId = questionIdKey(btn.dataset.questionId);
   const contentType = btn.dataset.contentType;
 
   const row = currentPlan.find(
-    x => Number(x.question_id) === questionId &&
+    x => questionIdKey(x.question_id) === questionId &&
          x.content_type === contentType
   );
 
@@ -1693,12 +1704,12 @@ document.addEventListener('click', async (e) => {
   const btn = e.target.closest('.verify-youtube');
   if (!btn) return;
 
-  const questionId = Number(btn.dataset.questionId);
+  const questionId = questionIdKey(btn.dataset.questionId);
   const contentType = btn.dataset.contentType;
 
   const row = currentPlan.find(
     x =>
-      Number(x.question_id) === questionId &&
+      questionIdKey(x.question_id) === questionId &&
       x.content_type === contentType
   );
 
@@ -1926,7 +1937,7 @@ async function verifyAllPlatforms() {
       const card = [...document.querySelectorAll('.question-card')].find(card => {
         const b = card.querySelector('.verify-youtube');
         return b &&
-          Number(b.dataset.questionId) === Number(r.question_id);
+          Number(b.dataset.questionId) === questionIdKey(r.question_id);
       });
 
       const videoId = card?.dataset.youtubeVideoId || '';
@@ -1934,7 +1945,7 @@ async function verifyAllPlatforms() {
       if (!videoId) {
         summary.youtube.unavailable++;
         summary.youtube.details.push(
-          `Q${r.question_id}: Video ID इस page session में उपलब्ध नहीं है`
+          `${questionIdLabel(r.question_id)}: Video ID इस page session में उपलब्ध नहीं है`
         );
         continue;
       }
@@ -1955,7 +1966,7 @@ async function verifyAllPlatforms() {
           body: JSON.stringify({
             platform: 'youtube',
             video_id: videoId,
-            question_id: Number(r.question_id),
+            question_id: questionIdKey(r.question_id),
             plan_id: r.plan_id || currentPlanId || null
           })
         });
@@ -1969,33 +1980,33 @@ async function verifyAllPlatforms() {
         if (data.status === 'published') {
           summary.youtube.published++;
           summary.youtube.details.push(
-            `Q${r.question_id}: 🟢 Published`
+            `${questionIdLabel(r.question_id)}: 🟢 Published`
           );
         } else if (data.status === 'processing') {
           summary.youtube.processing++;
           summary.youtube.details.push(
-            `Q${r.question_id}: 🟡 Processing`
+            `${questionIdLabel(r.question_id)}: 🟡 Processing`
           );
         } else if (data.status === 'failed') {
           summary.youtube.failed++;
           summary.youtube.details.push(
-            `Q${r.question_id}: 🔴 Failed${data.failure_reason ? ` — ${data.failure_reason}` : ''}`
+            `${questionIdLabel(r.question_id)}: 🔴 Failed${data.failure_reason ? ` — ${data.failure_reason}` : ''}`
           );
         } else if (data.status === 'not_found') {
           summary.youtube.notFound++;
           summary.youtube.details.push(
-            `Q${r.question_id}: ⚪ Not Found`
+            `${questionIdLabel(r.question_id)}: ⚪ Not Found`
           );
         } else {
           summary.youtube.unavailable++;
           summary.youtube.details.push(
-            `Q${r.question_id}: ℹ️ ${data.status || 'Unknown'}`
+            `${questionIdLabel(r.question_id)}: ℹ️ ${data.status || 'Unknown'}`
           );
         }
       } catch (err) {
         summary.youtube.failed++;
         summary.youtube.details.push(
-          `Q${r.question_id}: 🔴 Verify error — ${err.message || String(err)}`
+          `${questionIdLabel(r.question_id)}: 🔴 Verify error — ${err.message || String(err)}`
         );
       }
     }
@@ -2027,28 +2038,28 @@ async function verifyAllPlatforms() {
         if (!data) {
           summary.facebook.unavailable++;
           summary.facebook.details.push(
-            `Q${r.question_id}: ⚪ No Facebook publish record`
+            `${questionIdLabel(r.question_id)}: ⚪ No Facebook publish record`
           );
         } else if (String(data.status || '').toLowerCase() === 'published') {
           summary.facebook.published++;
           summary.facebook.details.push(
-            `Q${r.question_id}: 🟢 Published`
+            `${questionIdLabel(r.question_id)}: 🟢 Published`
           );
         } else if (['failed', 'error'].includes(String(data.status || '').toLowerCase())) {
           summary.facebook.failed++;
           summary.facebook.details.push(
-            `Q${r.question_id}: 🔴 Failed${data.error_message ? ` — ${data.error_message}` : ''}`
+            `${questionIdLabel(r.question_id)}: 🔴 Failed${data.error_message ? ` — ${data.error_message}` : ''}`
           );
         } else {
           summary.facebook.unavailable++;
           summary.facebook.details.push(
-            `Q${r.question_id}: 🟡 ${data.status || 'Pending'}`
+            `${questionIdLabel(r.question_id)}: 🟡 ${data.status || 'Pending'}`
           );
         }
       } catch (err) {
         summary.facebook.unavailable++;
         summary.facebook.details.push(
-          `Q${r.question_id}: ⚪ Verification unavailable`
+          `${questionIdLabel(r.question_id)}: ⚪ Verification unavailable`
         );
       }
     }
@@ -2063,7 +2074,7 @@ async function verifyAllPlatforms() {
       summary.instagram.checked++;
       summary.instagram.unavailable++;
       summary.instagram.details.push(
-        `Q${r.question_id}: ⚪ Instagram publish status का persistent verification record उपलब्ध नहीं है`
+        `${questionIdLabel(r.question_id)}: ⚪ Instagram publish status का persistent verification record उपलब्ध नहीं है`
       );
     }
 
@@ -2169,9 +2180,9 @@ document.addEventListener('click', (e) => {
 document.addEventListener('click', async (e) => {
   const btn = e.target.closest('.publish-facebook');
   if (!btn) return;
-  const questionId = Number(btn.dataset.questionId);
+  const questionId = questionIdKey(btn.dataset.questionId);
   const contentType = btn.dataset.contentType;
-  const row = currentPlan.find(x => Number(x.question_id) === questionId && x.content_type === contentType);
+  const row = currentPlan.find(x => questionIdKey(x.question_id) === questionId && x.content_type === contentType);
   if (!row) {
     showNotice('error', 'इस question का planning record नहीं मिला।');
     return;
@@ -2278,7 +2289,7 @@ function handleDirectVideoUpload(e){
   for(const file of files){
     const qid=detectQuestionId(file.name);
     if(!qid){ bad++; continue; }
-    if(currentPlanId && !currentPlan.some(r=>Number(r.question_id)===Number(qid))){ bad++; continue; }
+    if(currentPlanId && !currentPlan.some(r=>questionIdKey(r.question_id)===questionIdKey(qid))){ bad++; continue; }
     const key=String(qid);
     if(importedDirectVideos.has(key)){ duplicate++; continue; }
     importedDirectVideos.set(key,{name:file.name,qid,kind:'video',file,source:'direct'}); ok++;
@@ -2321,8 +2332,8 @@ function normalizeZipName(name){
 }
 
 function detectQuestionId(name){
-  const m=String(name||'').match(/(?:^|[_\-/])Q(\d+)(?:[_\-.]|$)/i);
-  return m ? Number(m[1]) : null;
+  const m=String(name||'').match(/(?:^|[_\-/])(Q[A-Z0-9]+)(?:[_\-.]|$)/i);
+  return m ? m[1] : null;
 }
 
 async function handleContentZipUpload(e){
@@ -2364,9 +2375,9 @@ async function handleContentZipUpload(e){
 }
 
 function assetsForQuestion(qid){
-  const arr=[...importedZipAssets.values()].filter(x=>Number(x.qid)===Number(qid));
-  const direct=[...importedDirectVideos.values()].filter(x=>Number(x.qid)===Number(qid));
-  const texts=[...importedZipTexts.values()].filter(x=>Number(x.qid)===Number(qid));
+  const arr=[...importedZipAssets.values()].filter(x=>questionIdKey(x.qid)===questionIdKey(qid));
+  const direct=[...importedDirectVideos.values()].filter(x=>questionIdKey(x.qid)===questionIdKey(qid));
+  const texts=[...importedZipTexts.values()].filter(x=>questionIdKey(x.qid)===questionIdKey(qid));
   return { images:arr.filter(x=>x.kind==='image'), videos:[...arr.filter(x=>x.kind==='video'),...direct], posts:texts };
 }
 
@@ -2396,16 +2407,16 @@ async function renderPublishPlatformPreviews(rows){
   const renderAsset=async item=>{
     const assets=item.type==='video'?item.a.videos:(item.type==='thumbnail'?item.a.images:item.a.images);
     const asset=assets?.[0];
-    if(!asset) return `<div class="publish-preview-item"><div class="publish-preview-empty">⚪ Q${esc(item.r.question_id)} — Asset Missing</div></div>`;
+    if(!asset) return `<div class="publish-preview-item"><div class="publish-preview-empty">⚪ ${esc(questionIdLabel(item.r.question_id))} — Asset Missing</div></div>`;
     try{
       const blob=await asset.entry.async('blob');
       const url=URL.createObjectURL(blob); publishPreviewObjectUrls.push(url);
       const media=item.type==='video'
         ? `<video class="publish-preview-media publish-preview-video" controls preload="metadata" src="${url}"></video>`
-        : `<img class="publish-preview-media" loading="lazy" src="${url}" alt="Q${esc(item.r.question_id)} preview">`;
-      return `<div class="publish-preview-item"><div>${media}</div><div class="publish-preview-file">Q${esc(item.r.question_id)} • ${esc(asset.name.split('/').pop()||asset.name)}</div></div>`;
+        : `<img class="publish-preview-media" loading="lazy" src="${url}" alt="${esc(questionIdLabel(item.r.question_id))} preview">`;
+      return `<div class="publish-preview-item"><div>${media}</div><div class="publish-preview-file">${esc(questionIdLabel(item.r.question_id))} • ${esc(asset.name.split('/').pop()||asset.name)}</div></div>`;
     }catch(e){
-      return `<div class="publish-preview-item"><div class="publish-preview-empty">⚠️ Q${esc(item.r.question_id)} — Preview load नहीं हुआ</div></div>`;
+      return `<div class="publish-preview-item"><div class="publish-preview-empty">⚠️ ${esc(questionIdLabel(item.r.question_id))} — Preview load नहीं हुआ</div></div>`;
     }
   };
   box.innerHTML='<div class="publish-preview-loading">⏳ Platform previews तैयार हो रहे हैं...</div>';
@@ -2493,7 +2504,7 @@ async function centralPublishFacebook(){
   const rows=currentPlan.filter(r=>['image','video','post'].includes(r.content_type));
   let done=0, skipped=0;
   for(const r of rows){
-    const q=(await fetchQuestions([r.question_id]))[Number(r.question_id)];
+    const q=(await fetchQuestions([r.question_id]))[questionIdKey(r.question_id)];
     const a=assetsForQuestion(r.question_id);
     let mediaUrl=null;
     if(r.content_type==='image'||r.content_type==='video'){
@@ -2504,7 +2515,7 @@ async function centralPublishFacebook(){
     const meta=buildFacebookContent(r,q);
     const {data:{session}}=await authClient.auth.getSession();
     if(!session?.access_token) throw new Error('Admin session उपलब्ध नहीं है।');
-    const response=await fetch(FACEBOOK_PUBLISH_FUNCTION,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`,'apikey':GS_SUPABASE_ANON_KEY},body:JSON.stringify({action:'publish',question_id:Number(r.question_id),plan_id:r.plan_id||currentPlanId,class_level:Number(r.class_level),platform:'facebook',content_type:r.content_type,media_url:mediaUrl,title:meta.title,caption:meta.caption,description:meta.description,hashtags:meta.hashtags,answer_comment:meta.answerComment,publish_mode:$('#publishMode')?.value||'now',scheduled_at:$('#publishDateTime')?.value||null})});
+    const response=await fetch(FACEBOOK_PUBLISH_FUNCTION,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`,'apikey':GS_SUPABASE_ANON_KEY},body:JSON.stringify({action:'publish',question_id:questionIdKey(r.question_id),plan_id:r.plan_id||currentPlanId,class_level:Number(r.class_level),platform:'facebook',content_type:r.content_type,media_url:mediaUrl,title:meta.title,caption:meta.caption,description:meta.description,hashtags:meta.hashtags,answer_comment:meta.answerComment,publish_mode:$('#publishMode')?.value||'now',scheduled_at:$('#publishDateTime')?.value||null})});
     const data=await response.json().catch(()=>({}));
     if(!response.ok||!data?.success) throw new Error(data?.error||data?.meta_error_message||'Facebook publishing failed.');
     done++;
@@ -2516,13 +2527,13 @@ async function centralPublishInstagram(){
   const rows=currentPlan.filter(r=>r.content_type==='image'||r.content_type==='post');
   let done=0,skipped=0;
   for(const r of rows){
-    const q=(await fetchQuestions([r.question_id]))[Number(r.question_id)];
+    const q=(await fetchQuestions([r.question_id]))[questionIdKey(r.question_id)];
     const asset=assetsForQuestion(r.question_id).images[0];
     if(!asset){skipped++;continue;}
     const uploaded=await uploadImportedAsset(asset,'instagram');
     const {data:{session}}=await authClient.auth.getSession();
     if(!session?.access_token) throw new Error('Admin session उपलब्ध नहीं है।');
-    const response=await fetch(INSTAGRAM_PUBLISH_FUNCTION,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`,'x-user-access-token':session.access_token,'apikey':GS_SUPABASE_ANON_KEY},body:JSON.stringify({access_token:session.access_token,media_url:uploaded.url,caption:buildInstagramCaption(q),question_id:Number(r.question_id),plan_id:r.plan_id||currentPlanId,class_level:Number(r.class_level),publish_mode:$('#publishMode')?.value||'now',scheduled_at:$('#publishDateTime')?.value||null})});
+    const response=await fetch(INSTAGRAM_PUBLISH_FUNCTION,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`,'x-user-access-token':session.access_token,'apikey':GS_SUPABASE_ANON_KEY},body:JSON.stringify({access_token:session.access_token,media_url:uploaded.url,caption:buildInstagramCaption(q),question_id:questionIdKey(r.question_id),plan_id:r.plan_id||currentPlanId,class_level:Number(r.class_level),publish_mode:$('#publishMode')?.value||'now',scheduled_at:$('#publishDateTime')?.value||null})});
     const data=await response.json().catch(()=>({}));
     if(!response.ok||!data?.success) throw new Error(data?.error||'Instagram publishing failed.');
     done++;
@@ -2534,14 +2545,14 @@ async function centralPublishYouTube(){
   const rows=currentPlan.filter(r=>r.content_type==='video');
   let done=0,skipped=0;
   for(const r of rows){
-    const q=(await fetchQuestions([r.question_id]))[Number(r.question_id)];
+    const q=(await fetchQuestions([r.question_id]))[questionIdKey(r.question_id)];
     const asset=assetsForQuestion(r.question_id).videos[0];
     if(!asset){skipped++;continue;}
     const uploaded=await uploadImportedAsset(asset,'youtube');
     const meta=buildYouTubeContent(q);
     const {data:{session}}=await authClient.auth.getSession();
     if(!session?.access_token) throw new Error('Admin session उपलब्ध नहीं है।');
-    const response=await fetch(YOUTUBE_PUBLISH_FUNCTION,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`,'apikey':GS_SUPABASE_ANON_KEY},body:JSON.stringify({storage_bucket:'content-media',storage_path:uploaded.path,title:meta.title,description:meta.description,tags:meta.tags,privacy_status:'private',question_id:Number(r.question_id),plan_id:r.plan_id||currentPlanId,class_level:Number(r.class_level),publish_mode:$('#publishMode')?.value||'now',scheduled_at:$('#publishDateTime')?.value||null})});
+    const response=await fetch(YOUTUBE_PUBLISH_FUNCTION,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`,'apikey':GS_SUPABASE_ANON_KEY},body:JSON.stringify({storage_bucket:'content-media',storage_path:uploaded.path,title:meta.title,description:meta.description,tags:meta.tags,privacy_status:'private',question_id:questionIdKey(r.question_id),plan_id:r.plan_id||currentPlanId,class_level:Number(r.class_level),publish_mode:$('#publishMode')?.value||'now',scheduled_at:$('#publishDateTime')?.value||null})});
     const data=await response.json().catch(()=>({}));
     if(!response.ok||!data?.ok) throw new Error(data?.error||'YouTube publishing failed.');
     done++;
@@ -2642,7 +2653,7 @@ async function generateAllPrompts() {
     const blocks = [];
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
-      const q = qmap[Number(r.question_id)];
+      const q = qmap[questionIdKey(r.question_id)];
       if (!q) continue;
       blocks.push(`================ QUESTION ${String(i + 1).padStart(2, '0')} ================\n${buildAutoFlexiblePrompt(savedMasterPrompt, q, r)}`);
     }
@@ -2674,7 +2685,7 @@ async function generateVideoPrompts(){
     const qmap=await fetchQuestions([...new Set(rows.map(r=>r.question_id))]);
     const blocks=[]; const cards=[];
     rows.forEach((r,i)=>{
-      const q=qmap[Number(r.question_id)]; if(!q) return;
+      const q=qmap[questionIdKey(r.question_id)]; if(!q) return;
       const filename=`Q${q.id}_Class${q.class_level}_Day${r.plan_day||1}_Video.mp4`;
       const prompt=buildAutoFlexiblePrompt(savedMasterPrompt,q,{...r,content_type:'video',platform:'Facebook Reel + Instagram Reel + YouTube Short'}) + `\n\nVIDEO OUTPUT REQUIREMENTS\n- Create ONE vertical 9:16 MP4 video for reuse on Facebook Reel, Instagram Reel and YouTube Short.\n- Do not create separate platform videos.\n- Keep important text inside safe margins and use Hindi/English exactly as supplied.\n- Suggested output: MP4, H.264, 1080x1920, clear audio, social-media ready.\n- REQUIRED FILE NAME: ${filename}\n- This filename is the identity used by Ganit Setu to match the video to Question Q${q.id}.`;
       blocks.push(`================ VIDEO ${String(i+1).padStart(2,'0')} — Q${q.id} ================\nFILE NAME: ${filename}\n\n${prompt}`);
