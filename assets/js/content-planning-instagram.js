@@ -1,32 +1,26 @@
-/* Ganit Setu — Instagram Connector
-   Uses the already-connected Facebook Page and the deployed
-   instagram-connect Supabase Edge Function.
-*/
+/* Ganit Setu — Instagram OAuth Connector */
 (() => {
   'use strict';
 
   const SUPABASE_URL = 'https://ucovgluwsiejrhjweuls.supabase.co';
-  const FUNCTION_URL = SUPABASE_URL + '/functions/v1/instagram-connect';
-  const CONNECTIONS_TABLE = 'social_accounts';
+  const FUNCTION_URL = SUPABASE_URL + '/functions/v1/instagram-oauth';
   const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_1XHxsjb_vNK8BYHHGiIYeQ__ouET5_Q';
 
-  function getClient() {
-    return window.supabaseClient || window.gsSupabaseClient || null;
-  }
+  const $ = (id) => document.getElementById(id);
 
-  function $(id) { return document.getElementById(id); }
-
-  function setStatus(text, type = '') {
+  function setStatus(message, type = '') {
     const el = $('cpInstagramConnectionStatus');
     if (!el) return;
-    el.textContent = text;
-    el.className = type ? `cp-connection-status ${type}` : 'cp-connection-status';
+    el.textContent = message;
+    el.className = type
+      ? `cp-connection-status ${type}`
+      : 'cp-connection-status';
   }
 
-  function setMessage(text, type = 'info') {
+  function setMessage(message, type = 'info') {
     const el = $('cpInstagramMessage');
     if (!el) return;
-    el.textContent = text || '';
+    el.textContent = message || '';
     el.className = `cp-social-message ${type}`;
   }
 
@@ -34,103 +28,148 @@
     const btn = $('cpConnectInstagramBtn');
     if (!btn) return;
     btn.disabled = busy;
-    btn.textContent = busy ? 'Instagram जोड़ रहा है…' : 'Connect Instagram';
+    btn.textContent = busy
+      ? 'Meta लॉगिन खोला जा रहा है…'
+      : 'Connect Instagram';
+  }
+
+  function getClient() {
+    return window.supabaseClient || window.gsSupabaseClient || null;
+  }
+
+  async function getHeaders() {
+    let bearer = SUPABASE_PUBLISHABLE_KEY;
+    const client = getClient();
+
+    if (client?.auth) {
+      try {
+        const { data } = await client.auth.getSession();
+        bearer = data?.session?.access_token || bearer;
+      } catch (e) {
+        console.warn('Supabase session check:', e);
+      }
+    }
+
+    return {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_PUBLISHABLE_KEY,
+      'Authorization': `Bearer ${bearer}`
+    };
+  }
+
+  async function callOAuth(payload) {
+    const response = await fetch(FUNCTION_URL, {
+      method: 'POST',
+      headers: await getHeaders(),
+      body: JSON.stringify(payload)
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(
+        result.error ||
+        result.message ||
+        `Instagram OAuth अनुरोध विफल (HTTP ${response.status})`
+      );
+    }
+
+    return result;
   }
 
   async function loadExisting() {
     const client = getClient();
-    if (!client) return false;
+
+    if (!client) {
+      setStatus('स्थिति जाँची नहीं जा सकी', 'error');
+      return false;
+    }
 
     try {
       const { data, error } = await client
-        .from(CONNECTIONS_TABLE)
-        .select('account_id,account_name,status,metadata')
+        .from('social_accounts')
+        .select('account_id,account_name,status,connection_status,metadata')
         .eq('platform', 'instagram')
         .eq('status', 'connected')
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      if (error || !data) {
+      if (error) throw error;
+
+      if (!data) {
         setStatus('Not connected');
+        setMessage('Instagram जोड़ने के लिए Connect Instagram दबाएँ।');
         return false;
       }
 
-      const metadata = data.metadata && typeof data.metadata === 'object' ? data.metadata : {};
-      const username = metadata.username || data.account_name || '';
-      const instagramId = metadata.instagram_id || data.account_id || '';
+      const metadata = data.metadata || {};
+      const username =
+        metadata.username ||
+        data.account_name ||
+        'Instagram';
+
+      const instagramId =
+        metadata.instagram_id ||
+        data.account_id ||
+        '';
 
       setStatus('✅ Connected', 'connected');
-      $('cpInstagramAccountName').textContent = username + (instagramId ? ` • Instagram ID: ${instagramId}` : '');
+
+      const accountName = $('cpInstagramAccountName');
+      if (accountName) {
+        accountName.textContent =
+          (username.startsWith('@') ? username : '@' + username) +
+          (instagramId ? ` • Instagram ID: ${instagramId}` : '');
+      }
+
       const btn = $('cpConnectInstagramBtn');
       if (btn) btn.textContent = '🔄 Refresh Instagram';
-      setMessage('Instagram account पहले से connected है।', 'success');
+
+      setMessage('Instagram account connected है।', 'success');
       return true;
-    } catch (e) {
-      console.warn('[Ganit Setu Instagram] existing connection check failed:', e);
+    } catch (error) {
+      console.error('[Ganit Setu Instagram status]', error);
+      setStatus('स्थिति जाँचने में समस्या', 'error');
+      setMessage(
+        'कनेक्शन की स्थिति नहीं पढ़ी जा सकी। Supabase RLS और social_accounts रिकॉर्ड जाँचें।',
+        'error'
+      );
       return false;
     }
   }
 
   async function connectInstagram() {
-    if ($('cpConnectInstagramBtn')?.disabled) return;
+    const btn = $('cpConnectInstagramBtn');
+    if (btn?.disabled) return;
 
     setBusy(true);
-    setStatus('Instagram account खोजा जा रहा है…');
-    setMessage('Facebook Page से linked Instagram account खोजा जा रहा है…', 'info');
+    setStatus('Meta से संपर्क किया जा रहा है…');
+    setMessage('Instagram को Facebook Page से जोड़ने की प्रक्रिया शुरू है।');
 
     try {
-      // Use the same logged-in Supabase session as the Admin Panel.
-      // Supabase Edge Functions normally require the user's JWT.
-      const client = getClient();
-      let accessToken = '';
-      if (client?.auth) {
-        const { data: sessionData } = await client.auth.getSession();
-        accessToken = sessionData?.session?.access_token || '';
+      const result = await callOAuth({ action: 'authorize' });
+
+      if (!result.authorization_url) {
+        throw new Error(
+          result.error || 'Authorization URL नहीं मिला। Edge Function का response जाँचें।'
+        );
       }
 
-      if (!accessToken) {
-        throw new Error('Admin Supabase session नहीं मिली। कृपया Admin Panel से logout करके फिर login करें।');
-      }
-
-      const headers = {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_PUBLISHABLE_KEY,
-        'Authorization': `Bearer ${accessToken}`
-      };
-
-      const response = await fetch(FUNCTION_URL, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ action: 'connect' })
-      });
-
-      const result = await response.json().catch(() => ({}));
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || result.details?.error?.message || 'Instagram connection failed');
-      }
-
-      const ig = result.instagram || {};
-      setStatus('✅ Connected', 'connected');
-      $('cpInstagramAccountName').textContent =
-        (ig.username ? '@' + ig.username : (ig.name || 'Instagram')) +
-        (ig.id ? ` • Instagram ID: ${ig.id}` : '');
-      $('cpConnectInstagramBtn').textContent = '🔄 Refresh Instagram';
-      setMessage('Instagram account सफलतापूर्वक connected है।', 'success');
+      // Meta login opens in the current tab.
+      window.location.assign(result.authorization_url);
     } catch (error) {
-      console.error('[Ganit Setu Instagram]', error);
+      console.error('[Ganit Setu Instagram OAuth]', error);
       setStatus('Not connected', 'error');
-      setMessage(error.message || 'Instagram connection failed', 'error');
-    } finally {
+      setMessage(error.message || 'Instagram कनेक्शन शुरू नहीं हो पाया।', 'error');
       setBusy(false);
-      if ($('cpConnectInstagramBtn')) $('cpConnectInstagramBtn').textContent = '🔄 Refresh Instagram';
     }
   }
 
   function boot() {
     const btn = $('cpConnectInstagramBtn');
     if (!btn) return;
+
     btn.addEventListener('click', connectInstagram);
     loadExisting();
   }
@@ -141,5 +180,8 @@
     boot();
   }
 
-  window.GanitSetuInstagramConnector = { connectInstagram, loadExisting };
+  window.GanitSetuInstagramConnector = {
+    connectInstagram,
+    loadExisting
+  };
 })();
