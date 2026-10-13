@@ -87,11 +87,9 @@ async function init() {
     alert('Admin session पढ़ी नहीं जा सकी।');
     return;
   }
-  // This workspace is allowed to open without an Admin login.
-  // Actions that call protected Edge Functions still require a valid session
-  // and will report their own authentication error when invoked.
   if (!session) {
-    console.info('Content Day Planning opened without an Admin session; protected publishing actions may require login.');
+    location.href = 'index.html';
+    return;
   }
 
   const start = $('#startDate');
@@ -412,10 +410,26 @@ async function generatePlan() {
 
     const reuseQuestions = false; // Ganit Setu rule: NEVER reuse a question on the same day.
 
+    // The database RPC expects p_requirements as an ARRAY of objects,
+    // not the nested class -> content map used by the UI summary.
+    const rpcRequirements = Object.entries(req).flatMap(([classLevel, contentCounts]) =>
+      Object.entries(contentCounts || {})
+        .filter(([, count]) => Number(count || 0) > 0)
+        .map(([contentType, count]) => ({
+          class_level: Number(classLevel),
+          content_type: String(contentType),
+          questions_per_day: Number(count)
+        }))
+    );
+
+    if (!rpcRequirements.length) {
+      throw new Error('कम से कम एक Class और Content Type की quantity चुनिए।');
+    }
+
     const { data, error } = await supabase.rpc('generate_content_plan_v4', {
       p_start_date: startDate,
       p_days: days,
-      p_requirements: req,
+      p_requirements: rpcRequirements,
       p_reuse_questions: reuseQuestions
     });
     if (error) throw error;
