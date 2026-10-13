@@ -1,0 +1,64 @@
+/* Ganit Setu Content Day Planning — clean layout overrides */
+:root { color-scheme: light; }
+body { background:#f3f6fb !important; color:#172033; }
+.content-page { width:min(1440px, calc(100% - 32px)) !important; margin:24px auto 48px !important; }
+.page-header { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:24px 26px !important; margin-bottom:20px !important; border-radius:18px !important; background:linear-gradient(120deg,#12365b,#1d5685) !important; color:#fff !important; box-shadow:0 8px 24px rgba(20,50,85,.12); }
+.page-header h1,.page-header p { color:#fff !important; }
+.page-header h1 { margin:0 0 8px !important; font-size:clamp(24px,3vw,34px) !important; letter-spacing:-.3px; }
+.page-header p { margin:0 !important; opacity:.9; line-height:1.55; }
+.back-btn { white-space:nowrap; }
+.content-page .panel, .content-page .cp-facebook-card, .content-page .cp-social-card { background:#fff !important; border:1px solid #e2e8f0 !important; border-radius:16px !important; padding:22px !important; margin:0 0 18px !important; box-shadow:0 4px 16px rgba(15,35,65,.045) !important; }
+.content-page h2 { color:#183b60; font-size:21px !important; margin:0 0 8px !important; }
+.content-page h3 { color:#183b60; }
+.section-help { color:#64748b !important; line-height:1.55; margin-top:4px !important; }
+.section-title-row { align-items:flex-start !important; gap:14px; margin-bottom:16px !important; }
+.question-selection-controls, .plan-controls, .requirement-grid, .platform-grid, .analytics-cards { gap:12px !important; }
+.question-selection-controls label, .plan-controls label { font-weight:600; color:#344256; }
+.content-page input:not([type=checkbox]):not([type=file]), .content-page select, .content-page textarea { min-height:42px; border:1px solid #cbd5e1 !important; border-radius:9px !important; padding:9px 11px !important; background:#fff; color:#172033; }
+.content-page button, .content-page .primary-btn, .content-page .secondary-btn, .content-page .back-btn { border-radius:9px !important; min-height:40px; font-weight:650; transition:filter .15s ease, transform .15s ease; }
+.content-page button:hover { filter:brightness(.97); }
+.content-page button:focus-visible, .content-page a:focus-visible, .content-page input:focus-visible, .content-page select:focus-visible { outline:3px solid rgba(59,130,246,.3); outline-offset:2px; }
+.selection-count-badge { background:#eaf2ff !important; color:#174c83 !important; border-radius:999px !important; padding:8px 12px !important; }
+.selection-status, .requirement-summary, .plan-summary, .notice, .zip-import-status, .prompt-central-note { border-radius:10px !important; line-height:1.55; }
+.available-questions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.available-questions > * { border:1px solid #e2e8f0; border-radius:12px; padding:14px; background:#fbfdff; }
+.selected-question-bar { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:14px; margin-top:16px; padding-top:16px; border-top:1px solid #e5eaf1; }
+.button-row { display:flex; flex-wrap:wrap; gap:10px !important; }
+.requirement-class-card, .platform-card { border:1px solid #e2e8f0 !important; border-radius:13px !important; background:#fbfdff !important; padding:16px !important; }
+.requirement-class-head { margin-bottom:12px; }
+.requirement-item { border:1px solid #e7edf5; background:#fff; border-radius:10px; padding:12px; }
+.common-content-option { margin:14px 0; padding:12px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; }
+.prompt-rules { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+.prompt-rules > div { padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; line-height:1.5; }
+.centralized-prompt-actions { display:flex; flex-wrap:wrap; gap:10px !important; }
+.platform-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); }
+.platform-card { min-width:0; }
+.zip-upload-box, .review-publish-panel, .analytics-preview { border-radius:13px !important; }
+.review-publish-panel { padding:18px !important; background:#f8fafc !important; border:1px solid #e2e8f0 !important; }
+.publish-controls { display:flex; flex-wrap:wrap; align-items:end; gap:12px !important; }
+.publish-readiness, .publish-platform-summary, .publish-action-area, .publish-platform-previews, .central-auto-publish-area { margin-top:14px; }
+#planResults .empty-box { border:1px dashed #cbd5e1; border-radius:12px; padding:22px; background:#f8fafc; color:#64748b; }
+#planResults > * { margin-bottom:14px; }
+.content-page .cp-facebook-card, .content-page .cp-social-card { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px; }
+.content-page .cp-facebook-card > div:first-child, .content-page .cp-social-card > div:first-child { flex:1 1 220px; }
+.content-page .cp-facebook-card h3, .content-page .cp-social-card h3 { margin:0 0 7px !important; }
+.content-page .cp-facebook-card small, .content-page .cp-social-card small { display:block; margin-top:5px; color:#64748b; }
+.filters { display:flex; flex-wrap:wrap; gap:12px !important; margin-bottom:16px; }
+.filters label { display:flex; align-items:center; gap:8px; }
+@media (max-width: 900px) {
+ .platform-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .prompt-rules { grid-template-columns:1fr; }
+ .available-questions { grid-template-columns:1fr; }
+}
+@media (max-width: 600px) {
+ .content-page { width:calc(100% - 20px) !important; margin:10px auto 28px !important; }
+ .page-header { padding:18px !important; align-items:flex-start; flex-direction:column; border-radius:14px !important; }
+ .content-page .panel, .content-page .cp-facebook-card, .content-page .cp-social-card { padding:16px !important; border-radius:13px !important; }
+ .section-title-row { flex-direction:column; }
+ .platform-grid { grid-template-columns:1fr; }
+ .selected-question-bar { align-items:stretch; flex-direction:column; }
+ .selected-question-bar .button-row, .centralized-prompt-actions { display:grid !important; grid-template-columns:1fr; }
+ .content-page button, .content-page .primary-btn, .content-page .secondary-btn { max-width:100%; }
+ .filters label { width:100%; justify-content:space-between; }
+ .filters select { flex:1; max-width:70%; }
+}
