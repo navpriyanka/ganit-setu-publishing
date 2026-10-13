@@ -240,6 +240,11 @@
      --------------------------------------------------------- */
 
   function openChannel() {
+  window.open(
+    'https://www.whatsapp.com/channel/0029VbDLOBHICVfrePXZ363D',
+    '_blank'
+  );
+} {
 
     const url =
       getChannelUrl();
