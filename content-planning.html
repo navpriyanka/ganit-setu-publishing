@@ -287,7 +287,15 @@
     <div id="cpWhatsAppConnectionStatus">Not connected</div>
     <small id="cpWhatsAppAccountName"></small>
   </div>
-  <button type="button" id="cpConnectWhatsAppBtn">Add WhatsApp Channel</button>
+  
+<button
+  type="button"
+  id="cpConnectWhatsAppBtn"
+  onclick="event.preventDefault(); event.stopImmediatePropagation(); window.open('https://whatsapp.com/channel/0029VbDLOBHICVfrePXZ363D', '_blank', 'noopener,noreferrer');"
+>
+  📲 Open Ganit Setu Channel
+</button>
+
   <div id="cpWhatsAppMessage"></div>
 </section>
 
