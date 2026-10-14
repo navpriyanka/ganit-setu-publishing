@@ -145,7 +145,19 @@ Ganit Setu — MP Board Mathematics Learning`,
       if(platform==='youtube'&&currentType==='post')throw new Error('Text-only YouTube Community publish उपलब्ध/सत्यापित नहीं है।');
       const pkg=await makeCurrentPlatformPackage(platform);const result=await publishPackage(pkg);
       if(result?.manual){msg(result.message||'मैन्युअल शेयर आवश्यक है।','info');return;}
-      msg(PLATFORM_LABELS[platform]+' publish API ने सफलता लौटाई।','success');
+      if(platform==='facebook'){
+        if(result?.comment_posted){
+          msg('✅ Facebook पोस्ट प्रकाशित हुई और सही उत्तर वाला Comment भी जुड़ गया।','success');
+        }else if(result?.comment_error){
+          msg('⚠️ Facebook पोस्ट प्रकाशित हुई, लेकिन Answer Comment नहीं जुड़ा: '+result.comment_error,'error');
+        }else if(result?.external_post_id||result?.external_url){
+          msg('✅ Facebook पोस्ट प्रकाशित हुई। Comment की स्थिति API response में नहीं मिली—Edge Function deployment जाँचना होगा।','info');
+        }else{
+          msg('Facebook API ने सफलता लौटाई, लेकिन पोस्ट ID/Comment status नहीं मिला। Supabase response जाँचें।','info');
+        }
+      }else{
+        msg(PLATFORM_LABELS[platform]+' publish API ने सफलता लौटाई।','success');
+      }
     }catch(e){msg(PLATFORM_LABELS[platform]+' publish नहीं हुआ: '+(e.message||e),'error');}
     finally{if(btn){btn.disabled=false;btn.textContent='🚀 Publish';}}
   }
