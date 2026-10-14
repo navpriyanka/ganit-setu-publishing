@@ -108,7 +108,10 @@ Ganit Setu — MP Board Mathematics Learning`,
     const base=readPackageFields(), variants=base.platform_packages||{};
     box.innerHTML=allowedPlatforms().map(platform=>{
       const v=variants[platform]&&typeof variants[platform]==='object'?variants[platform]:base;
-      const caption=v.caption||v.post||base.caption||base.post||'';
+      // For a question-based Text Post, every platform must use the exact same selected question.
+      // AI-generated per-platform variants may vary the question, so do not trust them for this case.
+      const isQuestionTextPost=currentType==='post'&&(($('postType')?.value||'question')==='question')&&!!currentQuestion;
+      const caption=isQuestionTextPost?qCaption(currentQuestion):(v.caption||v.post||base.caption||base.post||'');
       const note=platform==='youtube'&&currentType==='post'?'Text-only YouTube Community publishing सत्यापित नहीं है; अभी Preview/Copy בלבד।':platform==='whatsapp'?'WhatsApp Channel पर शेयर मैन्युअल रहेगा।':platform==='instagram'&&currentType==='post'?'Text-only Instagram publish उपलब्ध नहीं।':'';
       const canPublish=platform==='facebook' || (platform==='instagram'&&currentType!=='post'&&!!(generatedImageUrl||generatedImageData||videoUrl)) || (platform==='youtube'&&currentType!=='post'&&!!videoUrl);
       const publishLabel=platform==='whatsapp'?'📋 Copy for Channel':platform==='youtube'&&currentType==='post'?'Publish unavailable':canPublish?'🚀 Publish':'Publish unavailable';
@@ -123,6 +126,12 @@ Ganit Setu — MP Board Mathematics Learning`,
     const base=readPackageFields(), variants=base.platform_packages||{};
     const v=variants[platform]&&typeof variants[platform]==='object'?variants[platform]:base;
     const content={...base,...v,platform_packages:undefined};
+    // Publish/save the same verified selected question shown in the Text Post preview.
+    if(currentType==='post'&&(($('postType')?.value||'question')==='question')&&currentQuestion){
+      content.caption=qCaption(currentQuestion);
+      content.post=content.caption;
+      content.title=`कक्षा ${currentQuestion.class_level} गणित | अध्याय ${currentQuestion.chapter_number} — ${currentQuestion.chapter_name||''}`;
+    }
     content.hashtags=Array.isArray(content.hashtags)?content.hashtags.join(' '):(content.hashtags||'');
     content.keywords=Array.isArray(content.keywords)?content.keywords.join(', '):(content.keywords||'');
     let mediaUrl=generatedImageUrl;
