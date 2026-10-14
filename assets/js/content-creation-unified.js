@@ -288,6 +288,24 @@ Ganit Setu — MP Board Mathematics Learning`,
     msg(results.join(' | '),results.some(x=>x.includes('असफल')||x.includes('नहीं बना')||x.includes('नहीं है'))?'error':'success');
   }
   function renderReport(){const all=read('gsContentPackages',[]);$('savedCount').textContent=all.length;$('publishedCount').textContent=all.filter(x=>x.status==='published').length;$('pendingCount').textContent=all.filter(x=>x.status!=='published').length;const box=$('savedList');if(!box)return;box.innerHTML=all.slice(0,30).map(p=>`<label class="saved-row"><input type="checkbox" value="${esc(p.id)}"><span><b>Q${esc(p.question_id)}</b> · ${esc(p.platform)} · ${esc(p.content_type)}</span><span class="status-pill">${esc(p.status)}</span></label>`).join('')||'<div class="empty">अभी कोई saved package नहीं है।</div>'}
+  function deleteSelectedPackages(){
+    const ids=[...document.querySelectorAll('.saved-row input:checked')].map(x=>x.value);
+    if(!ids.length)return msg('पहले हटाने के लिए saved records चुनें।','error');
+    if(!confirm(`चुने गए ${ids.length} saved records हटाएँ? यह कार्रवाई इस ब्राउज़र में सेव सूची से उन्हें हटाएगी।`))return;
+    const all=read('gsContentPackages',[]);
+    const kept=all.filter(p=>!ids.includes(String(p.id)));
+    write('gsContentPackages',kept);
+    renderReport();
+    msg(`${all.length-kept.length} saved records हटाए गए।`,'success');
+  }
+  function deleteAllSavedPackages(){
+    const all=read('gsContentPackages',[]);
+    if(!all.length)return msg('हटाने के लिए कोई saved record नहीं है।','info');
+    if(!confirm(`क्या आप सभी ${all.length} saved records हटाना चाहते हैं? यह केवल इस ब्राउज़र की saved package सूची हटाएगा; प्रकाशित पोस्ट या Supabase database को नहीं बदलेगा।`))return;
+    write('gsContentPackages',[]);
+    renderReport();
+    msg('इस ब्राउज़र की सभी saved package entries हटा दी गईं।','success');
+  }
   async function publishSelected(){const ids=[...document.querySelectorAll('.saved-row input:checked')].map(x=>x.value);const all=read('gsContentPackages',[]);const selected=all.filter(p=>ids.includes(p.id));if(!selected.length)return msg('पहले saved packages select करें।','error');for(const p of selected){try{await publishPackage(p);p.status='published';p.published_at=new Date().toISOString()}catch(e){p.status='failed';p.error=e.message}}write('gsContentPackages',all);renderReport();msg('Selected packages की publishing प्रक्रिया पूरी हुई।','success')}
   function connectPlatform(p){try{if(p==='facebook'&&window.GanitSetuFacebookConnector)return window.GanitSetuFacebookConnector.startOAuth();if(p==='instagram'&&window.GanitSetuInstagramConnector)return window.GanitSetuInstagramConnector.connectInstagram();if(p==='youtube'&&window.GanitSetuYouTubeConnector)return window.GanitSetuYouTubeConnector.connect();if(p==='whatsapp'){window.open('https://www.whatsapp.com/channel/0029VbDLOBHICVfrePXZ363D','_blank','noopener,noreferrer');return;}msg('इस platform का connector अभी load नहीं हुआ।','error')}catch(e){msg(e.message,'error')}}
   function renderQuestion(q){
@@ -342,6 +360,7 @@ Ganit Setu — MP Board Mathematics Learning`,
     document.querySelectorAll('[data-platform]').forEach(b=>b.onclick=e=>{if(e.target.closest('.platform-connect'))return;msg('Platform चुनने की जरूरत नहीं है—कंटेंट चारों प्लेटफॉर्म के लिए एक साथ तैयार होगा।','info')});
     document.querySelectorAll('[data-type]').forEach(b=>b.onclick=()=>{currentType=b.dataset.type;updateState()});
     document.querySelectorAll('.platform-connect').forEach(b=>b.onclick=e=>{e.stopPropagation();connectPlatform(b.dataset.connect)});
+    if($('deleteSelected'))$('deleteSelected').onclick=deleteSelectedPackages;if($('deleteAllSaved'))$('deleteAllSaved').onclick=deleteAllSavedPackages;
     $('generatePost').onclick=generatePost;$('generateImage').onclick=generateImage;$('createVideo').onclick=videoModal;$('savePackage').onclick=savePackage;$('saveDraft').onclick=savePackage;$('publishCurrent').onclick=publishCurrent;$('publishSelected').onclick=publishSelected;
     $('previewPackage').onclick=()=>{const p=readPackageFields();$('previewQuestion').textContent=currentQuestion?`Q${currentQuestion.id}`:'—';$('previewText').textContent=JSON.stringify(p,null,2);$('previewImage').src=generatedImageData||generatedImageUrl||'';$('previewModal').hidden=false};$('closePreview').onclick=()=>$('previewModal').hidden=true;$('closeVideo').onclick=()=>{$('videoModal').hidden=true;$('videoFrame').src=''};
     window.addEventListener('message',e=>{if(e.data?.type==='GS_VIDEO_READY'&&currentQuestion&&String(e.data.question_id)===String(currentQuestion.id)){videoUrl=e.data.video_url||'';$('videoStatus').textContent='✅ Final Video Ready';$('videoLink').href=videoUrl;$('videoLink').hidden=!videoUrl;msg('Final video तैयार है। अब Save करके platform publish कर सकते हैं।','success')}})
