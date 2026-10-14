@@ -6,7 +6,8 @@
   const FACEBOOK_URL=SUPABASE_URL+'/functions/v1/facebook-oauth';
   const INSTAGRAM_URL=SUPABASE_URL+'/functions/v1/instagram-publish';
   const YOUTUBE_URL=SUPABASE_URL+'/functions/v1/youtube-publish';
-  const sb=window.supabaseClient||window.supabase.createClient(SUPABASE_URL,ANON);
+  const sb=window.supabaseClient||(window.supabase&&window.supabase.createClient?window.supabase.createClient(SUPABASE_URL,ANON,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}):null);
+  if(!sb) { console.error('Supabase client unavailable: load existing supabase-config.js first.'); }
   let currentQuestion=null,currentPlatform='facebook',currentType='post',generatedDraft='',generatedImageData='',generatedImageUrl='',videoUrl='',generatedPackage=null;
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
@@ -60,7 +61,7 @@ Ganit Setu — MP Board Mathematics Learning`,
       `Correct option: ${q.correct_option||''}`,
       `Hint: ${q.hint||''}`,
       `Explanation: ${q.explanation||''}`,
-      `Platform: ${currentPlatform}`,
+      'Generate adapted variants for Facebook, Instagram, YouTube and the existing WhatsApp Channel workflow. Return platform_variants object with facebook, instagram, youtube, whatsapp keys, each with title, caption, description, hashtags. Do not invent automatic WhatsApp publishing.',
       `Content type: ${currentType}`,
       instruction?`Additional instruction: ${instruction}`:''
     ].filter(Boolean).join('\n');
@@ -226,6 +227,52 @@ Ganit Setu — MP Board Mathematics Learning`,
   function renderReport(){const all=read('gsContentPackages',[]);$('savedCount').textContent=all.length;$('publishedCount').textContent=all.filter(x=>x.status==='published').length;$('pendingCount').textContent=all.filter(x=>x.status!=='published').length;const box=$('savedList');if(!box)return;box.innerHTML=all.slice(0,30).map(p=>`<label class="saved-row"><input type="checkbox" value="${esc(p.id)}"><span><b>Q${esc(p.question_id)}</b> · ${esc(p.platform)} · ${esc(p.content_type)}</span><span class="status-pill">${esc(p.status)}</span></label>`).join('')||'<div class="empty">अभी कोई saved package नहीं है।</div>'}
   async function publishSelected(){const ids=[...document.querySelectorAll('.saved-row input:checked')].map(x=>x.value);const all=read('gsContentPackages',[]);const selected=all.filter(p=>ids.includes(p.id));if(!selected.length)return msg('पहले saved packages select करें।','error');for(const p of selected){try{await publishPackage(p);p.status='published';p.published_at=new Date().toISOString()}catch(e){p.status='failed';p.error=e.message}}write('gsContentPackages',all);renderReport();msg('Selected packages की publishing प्रक्रिया पूरी हुई।','success')}
   function connectPlatform(p){try{if(p==='facebook'&&window.GanitSetuFacebookConnector)return window.GanitSetuFacebookConnector.startOAuth();if(p==='instagram'&&window.GanitSetuInstagramConnector)return window.GanitSetuInstagramConnector.connectInstagram();if(p==='youtube'&&window.GanitSetuYouTubeConnector)return window.GanitSetuYouTubeConnector.connect();if(p==='whatsapp'&&window.GanitSetuWhatsAppConnector)return window.GanitSetuWhatsAppConnector.openChannel();msg('इस platform का connector अभी load नहीं हुआ।','error')}catch(e){msg(e.message,'error')}}
+  // Question-selection helpers were referenced by bind() but were missing.
+  async function loadChapters(){
+    const sel=$('ccChapter'); if(!sel) return;
+    const cls=Number($('ccClass')?.value||9);
+    sel.innerHTML='<option value="all">सभी अध्याय</option>';
+    try{
+      const {data,error}=await sb.from('questions').select('chapter_number,chapter_name').eq('class_level',cls).order('chapter_number');
+      if(error) throw error;
+      const seen=new Set();
+      (data||[]).forEach(row=>{
+        const n=Number(row.chapter_number); if(!Number.isFinite(n)||n<1||seen.has(n)) return; seen.add(n);
+        const opt=document.createElement('option'); opt.value=String(n); opt.textContent=`अध्याय ${n}${row.chapter_name?' — '+row.chapter_name:''}`; sel.appendChild(opt);
+      });
+    }catch(e){ msg('अध्याय लोड नहीं हुए: '+(e.message||e),'error'); }
+  }
+  function renderQuestion(q){
+    const box=$('currentQuestion'); if(!box||!q) return;
+    box.innerHTML=`<div class="question-card"><div class="question-meta"><b>कक्षा ${esc(q.class_level)}</b> · अध्याय ${esc(q.chapter_number)} — ${esc(q.chapter_name||'')}</div><h3>${esc(q.question_text||'')}</h3><div class="question-options"><p>A) ${esc(q.option_a||'')}</p><p>B) ${esc(q.option_b||'')}</p><p>C) ${esc(q.option_c||'')}</p><p>D) ${esc(q.option_d||'')}</p></div><small>Question ID: ${esc(q.id)}</small></div>`;
+    if($('workspaceQuestion')) $('workspaceQuestion').textContent=`Q${q.id} · कक्षा ${q.class_level} · अध्याय ${q.chapter_number}`;
+    updatePublishAvailability();
+  }
+  async function generateQuestion(){
+    const btn=$('generateQuestion'); if(btn){btn.disabled=true;btn.textContent='⏳ प्रश्न खोज रहे हैं…'}
+    try{
+      const cls=Number($('ccClass')?.value||9), ch=$('ccChapter')?.value||'all';
+      let query=sb.from('questions').select('id,class_level,chapter_number,chapter_name,question_text,option_a,option_b,option_c,option_d,correct_option,hint,explanation').eq('class_level',cls);
+      if(ch!=='all') query=query.eq('chapter_number',Number(ch));
+      const {data,error}=await query.limit(500); if(error) throw error;
+      const rows=data||[]; if(!rows.length) throw new Error('इस Class/Chapter में प्रश्न नहीं मिले। Login/RLS और questions table जाँचें।');
+      const prior=String(currentQuestion?.id??'');
+      let choices=rows.filter(q=>String(q.id)!==prior); if(!choices.length) choices=rows;
+      currentQuestion=choices[Math.floor(Math.random()*choices.length)];
+      write('gsCurrentContentQuestion',currentQuestion); renderQuestion(currentQuestion); updateState();
+      msg(`प्रश्न Q${currentQuestion.id} लोड हो गया।`,'success');
+    }catch(e){console.error('Question selection error:',e);msg(e.message||'प्रश्न लोड नहीं हुआ।','error')}
+    finally{if(btn){btn.disabled=false;btn.textContent='✨ Generate New Question'}}
+  }
+  function updateState(){
+    document.querySelectorAll('[data-type]').forEach(b=>b.classList.toggle('active',b.dataset.type===currentType));
+    if($('currentType')) $('currentType').textContent=({post:'Text Post',image:'Image Post',reel:'Video / Reels',short:'Story / Short'})[currentType]||currentType;
+    const modes={post:'postStudio',image:'imageStudio',reel:'videoStudio',short:'videoStudio'};
+    ['postStudio','imageStudio','videoStudio','youtubeMeta','whatsappNote'].forEach(id=>{const el=$(id);if(el)el.hidden=true});
+    const active=$(modes[currentType]||'postStudio'); if(active) active.hidden=false;
+    if($('currentPlatform')) $('currentPlatform').textContent='सभी प्लेटफॉर्म';
+    updatePublishAvailability();
+  }
   function bind(){
     $('generateQuestion').onclick=generateQuestion;$('newQuestion').onclick=generateQuestion;$('ccClass').onchange=loadChapters;
     document.querySelectorAll('[data-platform]').forEach(b=>b.onclick=e=>{if(e.target.closest('.platform-connect'))return;currentPlatform=b.dataset.platform;updateState()});
