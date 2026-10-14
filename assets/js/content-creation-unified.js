@@ -113,10 +113,10 @@ Ganit Setu — MP Board Mathematics Learning`,
       const isQuestionTextPost=currentType==='post'&&(($('postType')?.value||'question')==='question')&&!!currentQuestion;
       const caption=isQuestionTextPost?qCaption(currentQuestion):(v.caption||v.post||base.caption||base.post||'');
       const isYouTubeTextPost=platform==='youtube'&&currentType==='post';
-      const note=isYouTubeTextPost?'टेक्स्ट कॉपी होगा और YouTube Community खुलेगा। अंतिम Post बटन वहाँ दबाना होगा।':platform==='whatsapp'?'WhatsApp Channel पर शेयर मैन्युअल रहेगा।':platform==='instagram'&&currentType==='post'?'Text-only Instagram publish उपलब्ध नहीं।':'';
-      const canPublish=platform==='facebook' || (platform==='instagram'&&currentType!=='post'&&!!(generatedImageUrl||generatedImageData||videoUrl)) || (platform==='youtube'&&(isYouTubeTextPost||!!videoUrl&&currentType!=='post'));
-      const publishLabel=platform==='whatsapp'?'📋 Copy for Channel':isYouTubeTextPost?'↗ Open Community + Copy':canPublish?'🚀 Publish':'Publish unavailable';
-      const pill=isYouTubeTextPost?'Copy + Open':canPublish?'Publish available':platform==='whatsapp'?'Manual share':'Preview only';
+      const note=isYouTubeTextPost?'टेक्स्ट कॉपी होगा और YouTube Community खुलेगा। अंतिम Post बटन वहाँ दबाना होगा।':platform==='whatsapp'?'पूरा पोस्ट कॉपी होगा और मौजूदा Ganit Setu WhatsApp Channel खुलेगा। वहाँ मैन्युअल रूप से शेयर करें।':platform==='instagram'&&currentType==='post'?'Text-only Instagram publish उपलब्ध नहीं।':'';
+      const canPublish=platform==='facebook' || platform==='whatsapp' || (platform==='instagram'&&currentType!=='post'&&!!(generatedImageUrl||generatedImageData||videoUrl)) || (platform==='youtube'&&(isYouTubeTextPost||!!videoUrl&&currentType!=='post'));
+      const publishLabel=platform==='whatsapp'?'↗ Copy + Open WhatsApp Channel':isYouTubeTextPost?'↗ Open Community + Copy':canPublish?'🚀 Publish':'Publish unavailable';
+      const pill=(isYouTubeTextPost||platform==='whatsapp')?'Copy + Open':canPublish?'Publish available':'Preview only';
       return `<article class="preview-platform-card" data-preview-platform="${platform}"><div class="preview-card-head"><h3>${PLATFORM_LABELS[platform]}</h3><span class="platform-pill">${pill}</span></div>${note?`<p class="preview-note">${esc(note)}</p>`:''}<pre>${esc(caption)}</pre><div class="preview-card-actions"><button type="button" class="btn ghost copy-platform" data-copy-platform="${platform}">📋 Copy Preview</button><button type="button" class="btn purple platform-publish" data-publish-platform="${platform}" ${canPublish?'':'disabled'}>${publishLabel}</button><button type="button" class="btn green platform-schedule" data-schedule-platform="${platform}" ${canPublish&&!isYouTubeTextPost?'':'disabled'}>🗓️ Schedule</button></div></article>`;
     }).join('');
     box.querySelectorAll('[data-copy-platform]').forEach(btn=>btn.addEventListener('click',async()=>{
@@ -160,7 +160,19 @@ Ganit Setu — MP Board Mathematics Learning`,
   async function publishOnePlatform(platform){
     const btn=document.querySelector(`[data-publish-platform="${platform}"]`);if(btn){btn.disabled=true;btn.textContent='Publishing…';}
     try{
-      if(platform==='whatsapp'){const pkg=await makeCurrentPlatformPackage(platform);await navigator.clipboard?.writeText([pkg.content.title,pkg.content.hook,pkg.content.caption||pkg.content.post,pkg.content.cta,pkg.content.hashtags].filter(Boolean).join('\n\n'));msg('WhatsApp टेक्स्ट कॉपी हुआ। अब Channel पर मैन्युअल शेयर करें; इसे Published नहीं माना गया।','info');return;}
+      if(platform==='whatsapp'){
+        // Open the user's existing Ganit Setu WhatsApp Channel; publishing remains manual.
+        window.open('https://whatsapp.com/channel/0029VbDLOBHICVfrePXZ363D','_blank','noopener');
+        const pkg=await makeCurrentPlatformPackage(platform);
+        const isQuestionPost=currentType==='post'&&(($('postType')?.value||'question')==='question')&&!!currentQuestion;
+        const postText=(isQuestionPost?qCaption(currentQuestion):[pkg.content.title,pkg.content.hook,pkg.content.caption||pkg.content.post,pkg.content.cta,pkg.content.hashtags].filter(Boolean).join('\n\n')).trim();
+        try{
+          if(navigator.clipboard&&window.isSecureContext)await navigator.clipboard.writeText(postText);
+          else {const ta=document.createElement('textarea');ta.value=postText;ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();ta.setSelectionRange(0,ta.value.length);const ok=document.execCommand('copy');ta.remove();if(!ok)throw new Error('copy failed');}
+          msg('पूरा पोस्ट कॉपी हो गया और Ganit Setu WhatsApp Channel खुल गया। वहाँ पोस्ट बॉक्स में Ctrl+V करें और मैन्युअल रूप से शेयर करें। अभी स्वतः प्रकाशित नहीं हुआ।','info');
+        }catch(e){msg('WhatsApp Channel खुल गया, लेकिन ऑटो-कॉपी नहीं हो पाया। Preview से टेक्स्ट चुनकर Ctrl+C करें। पोस्ट मैन्युअल रूप से शेयर होगा।','error');}
+        return;
+      }
       if(platform==='youtube'&&currentType==='post'){
         // Open the official Community page from this Content Creation action.
         // YouTube Data API does not provide a documented Community text-post create endpoint.
