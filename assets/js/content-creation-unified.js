@@ -358,7 +358,45 @@ Ganit Setu — MP Board Mathematics Learning`,
   }
   function renderReport(){const all=read('gsContentPackages',[]);$('savedCount').textContent=all.length;$('publishedCount').textContent=all.filter(x=>x.status==='published').length;$('pendingCount').textContent=all.filter(x=>x.status!=='published').length;const box=$('savedList');if(!box)return;box.innerHTML=all.slice(0,30).map(p=>`<label class="saved-row"><input type="checkbox" value="${esc(p.id)}"><span><b>Q${esc(p.question_id)}</b> · ${esc(p.platform)} · ${esc(p.content_type)}</span><span class="status-pill">${esc(p.status)}</span></label>`).join('')||'<div class="empty">अभी कोई saved package नहीं है।</div>'}
   async function publishSelected(){const ids=[...document.querySelectorAll('.saved-row input:checked')].map(x=>x.value);const all=read('gsContentPackages',[]);const selected=all.filter(p=>ids.includes(p.id));if(!selected.length)return msg('पहले saved packages select करें।','error');for(const p of selected){try{const result=await publishPackage(p);if(result?.manual){p.status='pending_manual';p.error=result.message||'मैन्युअल शेयर बाकी है'}else{p.status='published';p.published_at=new Date().toISOString();delete p.error}}catch(e){p.status='failed';p.error=e.message}}write('gsContentPackages',all);renderReport();const failures=selected.filter(p=>p.status==='failed');msg(failures.length?`${failures.length} package publish नहीं हुए। Saved report में error देखें।`:'चयनित packages की प्रक्रिया पूरी हुई। WhatsApp/manual items को Published नहीं माना गया।',failures.length?'error':'success')}
-  function connectPlatform(p){try{if(p==='facebook'&&window.GanitSetuFacebookConnector)return window.GanitSetuFacebookConnector.startOAuth();if(p==='instagram'&&window.GanitSetuInstagramConnector)return window.GanitSetuInstagramConnector.connectInstagram();if(p==='youtube'&&window.GanitSetuYouTubeConnector)return window.GanitSetuYouTubeConnector.connect();if(p==='whatsapp'&&window.GanitSetuWhatsAppConnector)return window.GanitSetuWhatsAppConnector.openChannel();msg('इस platform का connector अभी load नहीं हुआ।','error')}catch(e){msg(e.message,'error')}}
+  function setConnectionStatus(platform, text, connected=false){
+    const el=document.querySelector(`[data-status="${platform}"]`);
+    if(el){el.textContent='स्थिति: '+text;el.classList.toggle('connected',connected);el.classList.toggle('disconnected',!connected)}
+    const btn=document.querySelector(`[data-connect="${platform}"]`);
+    if(btn && platform!=='whatsapp')btn.textContent=connected?'🔄 Refresh Status':'🔗 Connect / Refresh';
+  }
+  async function refreshConnectionStatuses(){
+    for(const p of ['facebook','instagram','youtube'])setConnectionStatus(p,'जाँच जारी…',false);
+    try{
+      const {data:sessionData,error:sessionError}=await sb.auth.getSession();
+      if(sessionError)throw sessionError;
+      const userId=sessionData?.session?.user?.id;
+      if(!userId){for(const p of ['facebook','instagram','youtube'])setConnectionStatus(p,'Admin login आवश्यक',false);return;}
+      const {data:social,error:socialError}=await sb.from('social_accounts').select('platform,account_id,account_name,status,metadata,updated_at').in('platform',['facebook','instagram']).eq('status','connected').order('updated_at',{ascending:false});
+      if(socialError)throw socialError;
+      for(const p of ['facebook','instagram']){
+        const row=(social||[]).find(x=>x.platform===p);
+        const meta=row?.metadata||{};
+        const name=p==='facebook'?(meta.page_name||row?.account_name||'Facebook Page'):(meta.username||row?.account_name||'Instagram');
+        setConnectionStatus(p,row?`✅ Connected • ${name}`:'Connected record नहीं मिला',!!row);
+      }
+      const {data:yt,error:ytError}=await sb.from('youtube_accounts').select('channel_id,channel_name,status,updated_at').eq('user_id',userId).eq('status','connected').order('updated_at',{ascending:false}).limit(1).maybeSingle();
+      if(ytError)throw ytError;
+      setConnectionStatus('youtube',yt?`✅ Connected • ${yt.channel_name||'YouTube Channel'}`:'Connected record नहीं मिला',!!yt);
+    }catch(e){console.warn('[Ganit Setu Content Creation] connection status',e);for(const p of ['facebook','instagram','youtube'])setConnectionStatus(p,'स्थिति पढ़ने में समस्या',false);}
+    setConnectionStatus('whatsapp','मौजूदा Ganit Setu Channel • Manual Share',true);
+  }
+  async function connectPlatform(p){
+    if(p==='whatsapp'){window.open('https://whatsapp.com/channel/0029VbDLOBHICVfrePXZ363D','_blank','noopener');return;}
+    await refreshConnectionStatuses();
+    const el=document.querySelector(`[data-status="${p}"]`);
+    if(el?.textContent.includes('✅ Connected')){msg(PLATFORM_LABELS[p]+' पहले से connected है।','success');return;}
+    try{
+      if(p==='facebook'&&window.GanitSetuFacebookConnector)return await window.GanitSetuFacebookConnector.startOAuth();
+      if(p==='instagram'&&window.GanitSetuInstagramConnector)return await window.GanitSetuInstagramConnector.connectInstagram();
+      if(p==='youtube'&&window.GanitSetuYouTubeConnector)return await window.GanitSetuYouTubeConnector.connect();
+      msg('इस platform का connector अभी load नहीं हुआ।','error');
+    }catch(e){msg(e.message||'Connection शुरू नहीं हो पाया।','error')}
+  }
   function renderQuestion(q){
     currentQuestion=q||null;
     const box=$('currentQuestion');
@@ -416,5 +454,5 @@ Ganit Setu — MP Board Mathematics Learning`,
     $('previewPackage').onclick=()=>{const p=readPackageFields();$('previewQuestion').textContent=currentQuestion?`Q${currentQuestion.id}`:'—';$('previewText').textContent=JSON.stringify(p,null,2);$('previewImage').src=generatedImageData||generatedImageUrl||'';$('previewModal').hidden=false};$('closePreview').onclick=()=>$('previewModal').hidden=true;$('closeVideo').onclick=()=>{$('videoModal').hidden=true;$('videoFrame').src=''};
     window.addEventListener('message',e=>{if(e.data?.type==='GS_VIDEO_READY'&&currentQuestion&&String(e.data.question_id)===String(currentQuestion.id)){videoUrl=e.data.video_url||'';$('videoStatus').textContent='✅ Final Video Ready';$('videoLink').href=videoUrl;$('videoLink').hidden=!videoUrl;msg('Final video तैयार है। अब Save करके platform publish कर सकते हैं।','success')}})
   }
-  document.addEventListener('DOMContentLoaded',async()=>{bind();renderReport();await loadChapters();const old=read('gsCurrentContentQuestion',null);if(old){currentQuestion=old;renderQuestion(old)}updateState()});
+  document.addEventListener('DOMContentLoaded',async()=>{bind();renderReport();await refreshConnectionStatuses();await loadChapters();const old=read('gsCurrentContentQuestion',null);if(old){currentQuestion=old;renderQuestion(old)}updateState()});
 })();
