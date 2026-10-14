@@ -165,7 +165,7 @@ Ganit Setu — MP Board Mathematics Learning`,
       if(!pkg.platform_packages||requiredPlatforms.some(p=>!pkg.platform_packages[p]||typeof pkg.platform_packages[p]!=='object'))throw new Error('Gemini ने चारों platform_packages नहीं लौटाए। कृपया दोबारा Generate करें; इस बार सभी चार platform versions अनिवार्य हैं।');
       renderPackageFields(pkg);
       $('postStatus').textContent='GEMINI • '+allowedPlatforms().length+' PLATFORM PREVIEWS READY';
-      $('saveDraft').disabled=false;
+      if($('saveDraft')) $('saveDraft').disabled=false;
       renderPlatformPreviews();msg('चुने गए Content Type के लिए Preview तैयार हैं। जाँचकर Save All करें।','success');
     }catch(e){
       if($('postStatus'))$('postStatus').textContent='ERROR';
