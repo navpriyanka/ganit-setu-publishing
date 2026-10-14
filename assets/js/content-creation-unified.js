@@ -6,8 +6,7 @@
   const FACEBOOK_URL=SUPABASE_URL+'/functions/v1/facebook-oauth';
   const INSTAGRAM_URL=SUPABASE_URL+'/functions/v1/instagram-publish';
   const YOUTUBE_URL=SUPABASE_URL+'/functions/v1/youtube-publish';
-  const sb=window.supabaseClient||(window.supabase&&window.supabase.createClient?window.supabase.createClient(SUPABASE_URL,ANON,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}):null);
-  if(!sb) { console.error('Supabase client unavailable: load existing supabase-config.js first.'); }
+  const sb=window.supabaseClient||window.supabase.createClient(SUPABASE_URL,ANON);
   let currentQuestion=null,currentPlatform='facebook',currentType='post',generatedDraft='',generatedImageData='',generatedImageUrl='',videoUrl='',generatedPackage=null;
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
@@ -42,10 +41,31 @@ Ganit Setu — MP Board Mathematics Learning`,
       return {title:o.title||'',hook:o.hook||'',post:o.post||o.main_post||o.content||'',caption:o.caption||'',description:o.description||'',cta:o.cta||'',hashtags:Array.isArray(o.hashtags)?o.hashtags.join(' '):(o.hashtags||''),keywords:Array.isArray(o.keywords)?o.keywords.join(', '):(o.keywords||o.tags||''),answer_comment:o.answer_comment||o.answerComment||'',hint:o.hint||currentQuestion?.hint||'',explanation:o.explanation||currentQuestion?.explanation||''};
     }catch(e){return null;}
   }
+  const DEFAULT_MASTER_PROMPTS={
+    question:'Create a clear, engaging Hindi social post around the exact selected mathematics question. Preserve the question, options and correct answer exactly. Invite students to answer.',
+    trick:'Create a useful, mathematically correct maths trick for Class 9/10 students. Use a fresh question or example and explain the trick simply.',
+    motivation:'Create an encouraging Hindi post motivating Class 9/10 students to practise mathematics. No question is required. Do not invent app features.',
+    test:'Create a concise Hindi reminder encouraging students to take the test. Use only test details supplied in the topic/instruction; do not invent dates or times.',
+    app:'Create a clear announcement about the Ganit Setu app update using only the feature/update details supplied by the user. Do not invent features.'
+  };
+  const promptKey='gs_content_master_prompts_v1';
+  function getMasterPrompts(){try{return {...DEFAULT_MASTER_PROMPTS,...JSON.parse(localStorage.getItem(promptKey)||'{}')}}catch(e){return {...DEFAULT_MASTER_PROMPTS}}}
+  function selectedMasterPrompt(){const all=getMasterPrompts();return all[$('postType')?.value||'question']||all.question}
+  function initMasterPromptUI(){
+    const type=$('masterPromptType'),area=$('masterPromptText'),status=$('masterPromptStatus');if(!type||!area)return;
+    const fill=()=>{area.value=getMasterPrompts()[type.value]||'';if(status)status.textContent=''};
+    type.addEventListener('change',fill);fill();
+    $('saveMasterPrompt')?.addEventListener('click',()=>{const all=getMasterPrompts();all[type.value]=area.value.trim()||DEFAULT_MASTER_PROMPTS[type.value];localStorage.setItem(promptKey,JSON.stringify(all));if(status)status.textContent='सेव हो गया ✓';});
+  }
   function packagePrompt(){
     const q=currentQuestion;
     const instruction=$('postInstruction').value.trim();
+    const master=selectedMasterPrompt();
+    const type=$('postType').value;
+    const questionBased=(type==='question'||type==='trick');
     return [
+      `MASTER PROMPT: ${master}`,
+      `Question-based content: ${questionBased?'Yes. Use the selected fresh question or a relevant new maths example for a trick.':'No. Do not require or force a mathematics question; use the supplied topic/instruction.'}`,
       'Create a COMPLETE SOCIAL MEDIA CONTENT PACKAGE for THIS EXACT mathematics question only.',
       'Return ONLY valid JSON. No markdown, no ``` fences, no extra text.',
       'JSON keys exactly: title, hook, post, caption, description, cta, hashtags, keywords, answer_comment, hint, explanation.',
@@ -53,15 +73,15 @@ Ganit Setu — MP Board Mathematics Learning`,
       'keywords must be an array of 8-15 search tags/keywords.',
       'Keep mathematics accurate. Do not change the question, options, answer, hint or explanation.',
       'Write audience-friendly Hindi unless the selected language requires Hinglish or English.',
-      `Question ID: Q${q.id}`,
-      `Class: ${q.class_level}`,
-      `Chapter: ${q.chapter_number} - ${q.chapter_name||''}`,
-      `Question: ${q.question_text}`,
-      `Options: A) ${q.option_a}; B) ${q.option_b}; C) ${q.option_c}; D) ${q.option_d}`,
-      `Correct option: ${q.correct_option||''}`,
-      `Hint: ${q.hint||''}`,
-      `Explanation: ${q.explanation||''}`,
-      'Generate adapted variants for Facebook, Instagram, YouTube and the existing WhatsApp Channel workflow. Return platform_variants object with facebook, instagram, youtube, whatsapp keys, each with title, caption, description, hashtags. Do not invent automatic WhatsApp publishing.',
+      questionBased?`Question ID: Q${q?.id||''}`:'',
+      questionBased?`Class: ${q?.class_level||$('ccClass')?.value||''}`:'',
+      questionBased?`Chapter: ${q?.chapter_number||''} - ${q?.chapter_name||''}`:'',
+      questionBased?`Question: ${q?.question_text||''}`:'',
+      questionBased?`Options: A) ${q?.option_a||''}; B) ${q?.option_b||''}; C) ${q?.option_c||''}; D) ${q?.option_d||''}`:'',
+      questionBased?`Correct option: ${q?.correct_option||''}`:'',
+      questionBased?`Hint: ${q?.hint||''}`:'',
+      questionBased?`Explanation: ${q?.explanation||''}`:'',
+      `Platform: ${currentPlatform}`,
       `Content type: ${currentType}`,
       instruction?`Additional instruction: ${instruction}`:''
     ].filter(Boolean).join('\n');
@@ -93,13 +113,14 @@ Ganit Setu — MP Board Mathematics Learning`,
     };
   }
   async function generatePost(){
-    if(!currentQuestion)return msg('पहले एक Question generate करें।','error');
+    const selectedType=$('postType').value;
+    if(!currentQuestion&&(selectedType==='question'||selectedType==='trick'))return msg('इस Post Type के लिए पहले नया Question generate करें।','error');
     const btn=$('generatePost');btn.disabled=true;btn.textContent='⏳ पूरा Content Package बन रहा है...';
     try{
       const token=await session();
       const type=$('postType').value,language=$('postLanguage').value;
       const topic=packagePrompt();
-      const r=await fetch(AI_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`,'apikey':ANON},body:JSON.stringify({type,classLevel:String(currentQuestion.class_level),language,topic})});
+      const r=await fetch(AI_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`,'apikey':ANON},body:JSON.stringify({type,classLevel:String(currentQuestion?.class_level||$('ccClass')?.value||9),language,topic})});
       const raw=await r.text();let d={};try{d=JSON.parse(raw)}catch{d={error:raw}}
       if(!r.ok||!d.text)throw new Error(d.error||d.message||`Gemini error ${r.status}`);
       const pkg=parseGeneratedPackage(d.text);
@@ -227,53 +248,9 @@ Ganit Setu — MP Board Mathematics Learning`,
   function renderReport(){const all=read('gsContentPackages',[]);$('savedCount').textContent=all.length;$('publishedCount').textContent=all.filter(x=>x.status==='published').length;$('pendingCount').textContent=all.filter(x=>x.status!=='published').length;const box=$('savedList');if(!box)return;box.innerHTML=all.slice(0,30).map(p=>`<label class="saved-row"><input type="checkbox" value="${esc(p.id)}"><span><b>Q${esc(p.question_id)}</b> · ${esc(p.platform)} · ${esc(p.content_type)}</span><span class="status-pill">${esc(p.status)}</span></label>`).join('')||'<div class="empty">अभी कोई saved package नहीं है।</div>'}
   async function publishSelected(){const ids=[...document.querySelectorAll('.saved-row input:checked')].map(x=>x.value);const all=read('gsContentPackages',[]);const selected=all.filter(p=>ids.includes(p.id));if(!selected.length)return msg('पहले saved packages select करें।','error');for(const p of selected){try{await publishPackage(p);p.status='published';p.published_at=new Date().toISOString()}catch(e){p.status='failed';p.error=e.message}}write('gsContentPackages',all);renderReport();msg('Selected packages की publishing प्रक्रिया पूरी हुई।','success')}
   function connectPlatform(p){try{if(p==='facebook'&&window.GanitSetuFacebookConnector)return window.GanitSetuFacebookConnector.startOAuth();if(p==='instagram'&&window.GanitSetuInstagramConnector)return window.GanitSetuInstagramConnector.connectInstagram();if(p==='youtube'&&window.GanitSetuYouTubeConnector)return window.GanitSetuYouTubeConnector.connect();if(p==='whatsapp'&&window.GanitSetuWhatsAppConnector)return window.GanitSetuWhatsAppConnector.openChannel();msg('इस platform का connector अभी load नहीं हुआ।','error')}catch(e){msg(e.message,'error')}}
-  // Question-selection helpers were referenced by bind() but were missing.
-  async function loadChapters(){
-    const sel=$('ccChapter'); if(!sel) return;
-    const cls=Number($('ccClass')?.value||9);
-    sel.innerHTML='<option value="all">सभी अध्याय</option>';
-    try{
-      const {data,error}=await sb.from('questions').select('chapter_number,chapter_name').eq('class_level',cls).order('chapter_number');
-      if(error) throw error;
-      const seen=new Set();
-      (data||[]).forEach(row=>{
-        const n=Number(row.chapter_number); if(!Number.isFinite(n)||n<1||seen.has(n)) return; seen.add(n);
-        const opt=document.createElement('option'); opt.value=String(n); opt.textContent=`अध्याय ${n}${row.chapter_name?' — '+row.chapter_name:''}`; sel.appendChild(opt);
-      });
-    }catch(e){ msg('अध्याय लोड नहीं हुए: '+(e.message||e),'error'); }
-  }
-  function renderQuestion(q){
-    const box=$('currentQuestion'); if(!box||!q) return;
-    box.innerHTML=`<div class="question-card"><div class="question-meta"><b>कक्षा ${esc(q.class_level)}</b> · अध्याय ${esc(q.chapter_number)} — ${esc(q.chapter_name||'')}</div><h3>${esc(q.question_text||'')}</h3><div class="question-options"><p>A) ${esc(q.option_a||'')}</p><p>B) ${esc(q.option_b||'')}</p><p>C) ${esc(q.option_c||'')}</p><p>D) ${esc(q.option_d||'')}</p></div><small>Question ID: ${esc(q.id)}</small></div>`;
-    if($('workspaceQuestion')) $('workspaceQuestion').textContent=`Q${q.id} · कक्षा ${q.class_level} · अध्याय ${q.chapter_number}`;
-    updatePublishAvailability();
-  }
-  async function generateQuestion(){
-    const btn=$('generateQuestion'); if(btn){btn.disabled=true;btn.textContent='⏳ प्रश्न खोज रहे हैं…'}
-    try{
-      const cls=Number($('ccClass')?.value||9), ch=$('ccChapter')?.value||'all';
-      let query=sb.from('questions').select('id,class_level,chapter_number,chapter_name,question_text,option_a,option_b,option_c,option_d,correct_option,hint,explanation').eq('class_level',cls);
-      if(ch!=='all') query=query.eq('chapter_number',Number(ch));
-      const {data,error}=await query.limit(500); if(error) throw error;
-      const rows=data||[]; if(!rows.length) throw new Error('इस Class/Chapter में प्रश्न नहीं मिले। Login/RLS और questions table जाँचें।');
-      const prior=String(currentQuestion?.id??'');
-      let choices=rows.filter(q=>String(q.id)!==prior); if(!choices.length) choices=rows;
-      currentQuestion=choices[Math.floor(Math.random()*choices.length)];
-      write('gsCurrentContentQuestion',currentQuestion); renderQuestion(currentQuestion); updateState();
-      msg(`प्रश्न Q${currentQuestion.id} लोड हो गया।`,'success');
-    }catch(e){console.error('Question selection error:',e);msg(e.message||'प्रश्न लोड नहीं हुआ।','error')}
-    finally{if(btn){btn.disabled=false;btn.textContent='✨ Generate New Question'}}
-  }
-  function updateState(){
-    document.querySelectorAll('[data-type]').forEach(b=>b.classList.toggle('active',b.dataset.type===currentType));
-    if($('currentType')) $('currentType').textContent=({post:'Text Post',image:'Image Post',reel:'Video / Reels',short:'Story / Short'})[currentType]||currentType;
-    const modes={post:'postStudio',image:'imageStudio',reel:'videoStudio',short:'videoStudio'};
-    ['postStudio','imageStudio','videoStudio','youtubeMeta','whatsappNote'].forEach(id=>{const el=$(id);if(el)el.hidden=true});
-    const active=$(modes[currentType]||'postStudio'); if(active) active.hidden=false;
-    if($('currentPlatform')) $('currentPlatform').textContent='सभी प्लेटफॉर्म';
-    updatePublishAvailability();
-  }
   function bind(){
+    initMasterPromptUI();
+    $('postType')?.addEventListener('change',()=>{const mt=$('masterPromptType');if(mt){mt.value=$('postType').value;mt.dispatchEvent(new Event('change'))}});
     $('generateQuestion').onclick=generateQuestion;$('newQuestion').onclick=generateQuestion;$('ccClass').onchange=loadChapters;
     document.querySelectorAll('[data-platform]').forEach(b=>b.onclick=e=>{if(e.target.closest('.platform-connect'))return;currentPlatform=b.dataset.platform;updateState()});
     document.querySelectorAll('[data-type]').forEach(b=>b.onclick=()=>{currentType=b.dataset.type;updateState()});
