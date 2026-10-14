@@ -119,7 +119,24 @@ Ganit Setu — MP Board Mathematics Learning`,
       const pill=isYouTubeTextPost?'Copy + Open':canPublish?'Publish available':platform==='whatsapp'?'Manual share':'Preview only';
       return `<article class="preview-platform-card" data-preview-platform="${platform}"><div class="preview-card-head"><h3>${PLATFORM_LABELS[platform]}</h3><span class="platform-pill">${pill}</span></div>${note?`<p class="preview-note">${esc(note)}</p>`:''}<pre>${esc(caption)}</pre><div class="preview-card-actions"><button type="button" class="btn ghost copy-platform" data-copy-platform="${platform}">📋 Copy Preview</button><button type="button" class="btn purple platform-publish" data-publish-platform="${platform}" ${canPublish?'':'disabled'}>${publishLabel}</button><button type="button" class="btn green platform-schedule" data-schedule-platform="${platform}" ${canPublish&&!isYouTubeTextPost?'':'disabled'}>🗓️ Schedule</button></div></article>`;
     }).join('');
-    box.querySelectorAll('[data-copy-platform]').forEach(btn=>btn.addEventListener('click',()=>{const platform=btn.dataset.copyPlatform;const v=(base.platform_packages||{})[platform]||base;const text=v.caption||v.post||base.caption||base.post||'';navigator.clipboard?.writeText(text).then(()=>msg(PLATFORM_LABELS[platform]+' preview कॉपी हो गया।','success')).catch(()=>msg('कॉपी नहीं हो पाया; Preview से text चुनकर कॉपी करें।','error'));}));
+    box.querySelectorAll('[data-copy-platform]').forEach(btn=>btn.addEventListener('click',async()=>{
+      const platform=btn.dataset.copyPlatform;
+      const v=(base.platform_packages||{})[platform]||base;
+      const isQuestionTextPost=currentType==='post'&&(($('postType')?.value||'question')==='question')&&!!currentQuestion;
+      // Copy the complete post, not just the first caption/line.
+      const parts=isQuestionTextPost
+        ? [qCaption(currentQuestion)]
+        : [v.title||base.title, v.hook||base.hook, v.caption||v.post||base.caption||base.post, v.cta||base.cta, Array.isArray(v.hashtags)?v.hashtags.join(' '):(v.hashtags||base.hashtags)]
+            .map(x=>String(x||'').trim()).filter(Boolean);
+      const text=parts.join('\n\n').trim();
+      if(!text)return msg('कॉपी करने के लिए पोस्ट का टेक्स्ट खाली है।','error');
+      try{
+        if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(text);msg(PLATFORM_LABELS[platform]+' का पूरा पोस्ट कॉपी हो गया। YouTube में Ctrl+V करें।','success');}
+        else{
+          const ta=document.createElement('textarea');ta.value=text;ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();ta.setSelectionRange(0,ta.value.length);const ok=document.execCommand('copy');ta.remove();if(!ok)throw new Error('copy command failed');msg(PLATFORM_LABELS[platform]+' का पूरा पोस्ट कॉपी हो गया। YouTube में Ctrl+V करें।','success');
+        }
+      }catch(e){msg('ऑटो-कॉपी नहीं हो पाया। Preview के टेक्स्ट पर क्लिक करके Ctrl+A, Ctrl+C करें।','error');}
+    }));
     box.querySelectorAll('[data-publish-platform]').forEach(btn=>btn.addEventListener('click',()=>publishOnePlatform(btn.dataset.publishPlatform)));
     box.querySelectorAll('[data-schedule-platform]').forEach(btn=>btn.addEventListener('click',()=>schedulePlatforms([btn.dataset.schedulePlatform])));
   }
