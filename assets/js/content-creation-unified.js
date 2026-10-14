@@ -220,10 +220,9 @@ Ganit Setu — MP Board Mathematics Learning`,
     if(!currentQuestion)return msg('पहले Question generate करें।','error');
     try{
       const base=readPackageFields(); generatedDraft=base.post||generatedDraft;
-      let mediaUrl=generatedImageUrl;
-      if(generatedImageData&&!mediaUrl){const up=await uploadFile(dataUrlToFile(generatedImageData,`Q${currentQuestion.id}_GANIT_SETU.jpg`),'images',currentQuestion.id);mediaUrl=generatedImageUrl=up.url}
       const variants=base.platform_packages||{};
-      const platforms=['facebook','instagram','youtube','whatsapp'];
+      // Text-only workflow: save drafts only for platforms that support this path.
+      const platforms=['facebook','youtube','whatsapp'];
       const all=read('gsContentPackages',[]);
       const created=[];
       for(const platform of platforms){
@@ -231,11 +230,11 @@ Ganit Setu — MP Board Mathematics Learning`,
         const content={...base,...v,platform_packages:undefined};
         content.hashtags=Array.isArray(content.hashtags)?content.hashtags.join(' '):(content.hashtags||base.hashtags||'');
         content.keywords=Array.isArray(content.keywords)?content.keywords.join(', '):(content.keywords||base.keywords||'');
-        const pkg={id:crypto.randomUUID(),question_id:Number(currentQuestion.id),class_level:Number(currentQuestion.class_level),chapter_number:Number(currentQuestion.chapter_number),chapter_name:currentQuestion.chapter_name||'',platform,content_type:platform==='youtube'?'video':(platform==='instagram'?'image':currentType),content,draft:content.post||content.caption||'',media_url:mediaUrl||'',video_url:videoUrl||'',created_at:new Date().toISOString(),status:'saved'};
+        const pkg={id:crypto.randomUUID(),question_id:Number(currentQuestion.id),class_level:Number(currentQuestion.class_level),chapter_number:Number(currentQuestion.chapter_number),chapter_name:currentQuestion.chapter_name||'',platform,content_type:'post',content,draft:content.post||content.caption||'',media_url:'',video_url:'',created_at:new Date().toISOString(),status:'saved'};
         all.unshift(pkg);created.push(platform);
       }
       write('gsContentPackages',all.slice(0,100));
-      msg('चारों प्लेटफॉर्म के पैकेज सेव हो गए: '+created.join(', ')+'. YouTube के लिए Final Video और Instagram के लिए Image/Video जरूरी है।','success');renderReport()
+      msg('Text Post drafts सेव हो गए: '+created.join(', ')+'. Instagram शामिल नहीं है क्योंकि वहाँ text-only feed post प्रकाशित नहीं होती। YouTube Community केवल preview/draft है; publishing अलग से सत्यापित करनी होगी।','success');renderReport()
     }catch(e){msg(e.message,'error')}
   }
   async function publishPackage(pkg){
@@ -270,27 +269,26 @@ Ganit Setu — MP Board Mathematics Learning`,
     if(!currentQuestion)return msg('पहले Question generate करें।','error');
     const base=readPackageFields();
     const variants=base.platform_packages||{};
-    let mediaUrl=generatedImageUrl;
-    try{
-      if(generatedImageData&&!mediaUrl){const up=await uploadFile(dataUrlToFile(generatedImageData,`Q${currentQuestion.id}_GANIT_SETU.jpg`),'images',currentQuestion.id);mediaUrl=generatedImageUrl=up.url}
-    }catch(e){return msg('Image upload नहीं हुई: '+e.message,'error')}
-    const platforms=['facebook','instagram','youtube','whatsapp'];
     const results=[];
-    for(const platform of platforms){
-      const v=variants[platform]&&typeof variants[platform]==='object'?variants[platform]:base;
-      const content={...base,...v,platform_packages:undefined};
-      content.hashtags=Array.isArray(content.hashtags)?content.hashtags.join(' '):(content.hashtags||'');
-      content.keywords=Array.isArray(content.keywords)?content.keywords.join(', '):(content.keywords||'');
-      const pkg={question_id:Number(currentQuestion.id),platform,content_type:platform==='youtube'?'video':(platform==='instagram'?'image':currentType),content,draft:content.post||content.caption||'',media_url:mediaUrl||'',video_url:videoUrl||''};
-      if(platform==='youtube'&&!pkg.video_url){results.push('YouTube: Final Video नहीं बना है, इसलिए publish नहीं किया');continue}
-      if(platform==='instagram'&&!pkg.media_url&&!pkg.video_url){results.push('Instagram: Image/Video नहीं है, इसलिए publish नहीं किया');continue}
-      try{const result=await publishPackage(pkg);results.push(platform==='whatsapp'?'WhatsApp: कंटेंट कॉपी किया; Channel पर मैन्युअल शेयर करें':platform+': सफल'+(result?.external_url?' — '+result.external_url:''))}
-      catch(e){results.push(platform+': असफल — '+(e.message||e))}
-    }
-    msg(results.join(' | '),results.some(x=>x.includes('असफल')||x.includes('नहीं बना')||x.includes('नहीं है'))?'error':'success');
+    // Only Facebook has a configured text-post publishing request in this workflow.
+    const v=variants.facebook&&typeof variants.facebook==='object'?variants.facebook:base;
+    const content={...base,...v,platform_packages:undefined};
+    content.hashtags=Array.isArray(content.hashtags)?content.hashtags.join(' '):(content.hashtags||'');
+    content.keywords=Array.isArray(content.keywords)?content.keywords.join(', '):(content.keywords||'');
+    const pkg={question_id:Number(currentQuestion.id),platform:'facebook',content_type:'post',content,draft:content.post||content.caption||'',media_url:'',video_url:''};
+    try{
+      const result=await publishPackage(pkg);
+      results.push('Facebook: सफल'+(result?.external_url?' — '+result.external_url:''));
+    }catch(e){results.push('Facebook: असफल — '+(e.message||e));}
+    const whatsappText=[base.title,base.hook,base.post,base.caption,base.cta,base.hashtags].filter(Boolean).join('\n\n');
+    try{await navigator.clipboard?.writeText(whatsappText);results.push('WhatsApp Channel: टेक्स्ट कॉपी किया गया; चैनल पर खोलकर मैन्युअल Publish करें।');}
+    catch(e){results.push('WhatsApp Channel: टेक्स्ट कॉपी नहीं हो पाया — '+(e.message||e));}
+    results.push('Instagram: Text-only पोस्ट समर्थित नहीं, इसलिए छोड़ा गया।');
+    results.push('YouTube Community: Preview/Draft तक सीमित; deployed function Community text post के लिए सत्यापित नहीं है।');
+    msg(results.join(' | '),results.some(x=>x.includes('असफल'))?'error':'success');
   }
   function renderReport(){const all=read('gsContentPackages',[]);$('savedCount').textContent=all.length;$('publishedCount').textContent=all.filter(x=>x.status==='published').length;$('pendingCount').textContent=all.filter(x=>x.status!=='published').length;const box=$('savedList');if(!box)return;box.innerHTML=all.slice(0,30).map(p=>`<label class="saved-row"><input type="checkbox" value="${esc(p.id)}"><span><b>Q${esc(p.question_id)}</b> · ${esc(p.platform)} · ${esc(p.content_type)}</span><span class="status-pill">${esc(p.status)}</span></label>`).join('')||'<div class="empty">अभी कोई saved package नहीं है।</div>'}
-  async function publishSelected(){const ids=[...document.querySelectorAll('.saved-row input:checked')].map(x=>x.value);const all=read('gsContentPackages',[]);const selected=all.filter(p=>ids.includes(p.id));if(!selected.length)return msg('पहले saved packages select करें।','error');for(const p of selected){try{await publishPackage(p);p.status='published';p.published_at=new Date().toISOString()}catch(e){p.status='failed';p.error=e.message}}write('gsContentPackages',all);renderReport();msg('Selected packages की publishing प्रक्रिया पूरी हुई।','success')}
+  async function publishSelected(){const ids=[...document.querySelectorAll('.saved-row input:checked')].map(x=>x.value);const all=read('gsContentPackages',[]);const selected=all.filter(p=>ids.includes(p.id));if(!selected.length)return msg('पहले saved packages select करें।','error');const allowed=selected.filter(p=>p.platform==='facebook');const skipped=selected.length-allowed.length;if(!allowed.length)return msg('अभी केवल Facebook Text Post को bulk publish किया जा सकता है। WhatsApp मैन्युअल है; Instagram/YouTube इस publish flow में नहीं हैं।','error');for(const p of allowed){try{await publishPackage({...p,content_type:'post',media_url:'',video_url:''});p.status='published';p.published_at=new Date().toISOString()}catch(e){p.status='failed';p.error=e.message}}write('gsContentPackages',all);renderReport();msg('Facebook Text Post publishing प्रक्रिया पूरी हुई।'+(skipped?` ${skipped} unsupported package(s) छोड़े गए।`:''),allowed.some(p=>p.status==='failed')?'error':'success')}
   function connectPlatform(p){try{if(p==='facebook'&&window.GanitSetuFacebookConnector)return window.GanitSetuFacebookConnector.startOAuth();if(p==='instagram'&&window.GanitSetuInstagramConnector)return window.GanitSetuInstagramConnector.connectInstagram();if(p==='youtube'&&window.GanitSetuYouTubeConnector)return window.GanitSetuYouTubeConnector.connect();if(p==='whatsapp'&&window.GanitSetuWhatsAppConnector)return window.GanitSetuWhatsAppConnector.openChannel();msg('इस platform का connector अभी load नहीं हुआ।','error')}catch(e){msg(e.message,'error')}}
   function renderQuestion(q){
     currentQuestion=q||null;
@@ -341,7 +339,7 @@ Ganit Setu — MP Board Mathematics Learning`,
     initMasterPromptUI();
     $('postType')?.addEventListener('change',()=>{const mt=$('masterPromptType');if(mt){mt.value=$('postType').value;mt.dispatchEvent(new Event('change'))}});
     $('generateQuestion').onclick=generateQuestion;$('newQuestion').onclick=generateQuestion;$('ccClass').onchange=loadChapters;
-    document.querySelectorAll('[data-platform]').forEach(b=>b.onclick=e=>{if(e.target.closest('.platform-connect'))return;msg('Platform चुनने की जरूरत नहीं है—कंटेंट चारों प्लेटफॉर्म के लिए एक साथ तैयार होगा।','info')});
+    document.querySelectorAll('[data-platform]').forEach(b=>b.onclick=e=>{if(e.target.closest('.platform-connect'))return;msg('एक Question से platform-specific text variants बनते हैं। केवल supported text publishing ही सक्रिय है।','info')});
     document.querySelectorAll('[data-type]').forEach(b=>b.onclick=()=>{currentType=b.dataset.type;updateState()});
     document.querySelectorAll('.platform-connect').forEach(b=>b.onclick=e=>{e.stopPropagation();connectPlatform(b.dataset.connect)});
     $('generatePost').onclick=generatePost;$('generateImage').onclick=generateImage;$('createVideo').onclick=videoModal;$('savePackage').onclick=savePackage;$('saveDraft').onclick=savePackage;$('publishCurrent').onclick=publishCurrent;$('publishSelected').onclick=publishSelected;
