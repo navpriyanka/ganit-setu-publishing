@@ -50,12 +50,14 @@ Ganit Setu — MP Board Mathematics Learning`,
   };
   const promptKey='gs_content_master_prompts_v1';
   function getMasterPrompts(){try{return {...DEFAULT_MASTER_PROMPTS,...JSON.parse(localStorage.getItem(promptKey)||'{}')}}catch(e){return {...DEFAULT_MASTER_PROMPTS}}}
-  function persistMasterPrompts(all){try{localStorage.setItem(promptKey,JSON.stringify(all));const check=JSON.parse(localStorage.getItem(promptKey)||'{}');if(!check||typeof check!=='object')throw new Error('Storage verification failed');return true}catch(e){throw new Error('Master Prompt सेव नहीं हो पाया। ब्राउज़र की site storage अनुमति जाँचें। '+(e.message||''))}}
+  function persistMasterPrompts(all){try{const serialized=JSON.stringify(all);localStorage.setItem(promptKey,serialized);const saved=localStorage.getItem(promptKey);if(saved!==serialized)throw new Error('सेव की पुष्टि नहीं हो सकी');const check=JSON.parse(saved);if(!check||typeof check!=='object')throw new Error('Storage verification failed');return true}catch(e){throw new Error('Master Prompt इस ब्राउज़र में सेव नहीं हो पाया। Browser site data/storage अनुमति जाँचें। '+(e.message||''))}}
   function selectedMasterPrompt(){const all=getMasterPrompts();return all[$('postType')?.value||'question']||all.question}
   function initMasterPromptUI(){
     const type=$('masterPromptType'),area=$('masterPromptText'),status=$('masterPromptStatus');if(!type||!area)return;
-    const fill=()=>{area.value=getMasterPrompts()[type.value]||'';if(status)status.textContent=''};
+    const fill=()=>{area.value=getMasterPrompts()[type.value]||DEFAULT_MASTER_PROMPTS[type.value]||'';if(status)status.textContent='';};
     type.addEventListener('change',fill);fill();
+    // Keep the visible editor aligned with the selected Post Type; saved values remain per type.
+    const postType=$('postType');if(postType){postType.addEventListener('change',()=>{type.value=postType.value;fill()});}
     const save=$('saveMasterPrompt'); if(save){save.type='button';save.addEventListener('click',(ev)=>{ev.preventDefault();try{const all=getMasterPrompts();all[type.value]=area.value.trim()||DEFAULT_MASTER_PROMPTS[type.value];persistMasterPrompts(all);if(status)status.textContent='सेव हो गया ✓';msg('Master Prompt सेव हो गया। पेज refresh करके भी सुरक्षित रहना चाहिए।','success')}catch(err){if(status)status.textContent=err.message;msg(err.message,'error')}})}
   }
   function packagePrompt(){
@@ -114,25 +116,34 @@ Ganit Setu — MP Board Mathematics Learning`,
     };
   }
   async function generatePost(){
-    const selectedType=$('postType').value;
+    const selectedType=$('postType')?.value||'question';
     if(!currentQuestion&&(selectedType==='question'||selectedType==='trick'))return msg('इस Post Type के लिए पहले नया Question generate करें।','error');
-    const btn=$('generatePost');btn.disabled=true;btn.textContent='⏳ पूरा Content Package बन रहा है...';
+    const btn=$('generatePost');if(!btn)return;
+    btn.disabled=true;btn.textContent='⏳ पूरा Content Package बन रहा है...';
     try{
       const token=await session();
-      const type=$('postType').value,language=$('postLanguage').value;
+      const type=selectedType,language=$('postLanguage')?.value||'hi';
       const topic=packagePrompt();
-      if(!topic.includes('MASTER PROMPT:'))throw new Error('Master Prompt नहीं मिला। पहले Prompt सेव/चुनें।');
-      const r=await fetch(AI_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`,'apikey':ANON},body:JSON.stringify({type,classLevel:String(currentQuestion?.class_level||$('ccClass')?.value||9),language,topic})});
+      const master=selectedMasterPrompt();
+      if(!master||!master.trim())throw new Error('इस Post Type का Master Prompt खाली है। Master Prompts खोलकर Prompt लिखें और सेव करें।');
+      const payload={type,classLevel:String(currentQuestion?.class_level||$('ccClass')?.value||9),language,topic,prompt:topic,masterPrompt:master,question:currentQuestion||null,platforms:['facebook','instagram','youtube','whatsapp']};
+      let r;
+      try{r=await fetch(AI_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`,'apikey':ANON},body:JSON.stringify(payload)});}catch(netErr){throw new Error('Gemini Edge Function तक request नहीं पहुँची। इंटरनेट/Function URL जाँचें: '+(netErr.message||netErr));}
       const raw=await r.text();let d={};try{d=JSON.parse(raw)}catch{d={error:raw}}
-      if(!r.ok||!d.text)throw new Error(d.error||d.message||`Gemini error ${r.status}`);
-      const pkg=parseGeneratedPackage(d.text);
-      if(!pkg)throw new Error('Gemini ने valid Content Package JSON नहीं दिया। फिर से Generate करें।');
+      if(!r.ok){const detail=typeof d.error==='string'?d.error:(d.error?.message||d.message||raw||`HTTP ${r.status}`);throw new Error(`Gemini request failed (${r.status}): ${detail}`)}
+      const responseText=d.text||d.content||d.result?.text||d.data?.text||d.output_text||'';
+      if(!responseText){throw new Error('Gemini Function ने success response दिया, लेकिन text/content नहीं मिला। Response: '+JSON.stringify(d).slice(0,700));}
+      const pkg=parseGeneratedPackage(responseText);
+      if(!pkg)throw new Error('Gemini से उत्तर आया, लेकिन वह अपेक्षित JSON format में नहीं है। कृपया Edge Function का response देखें। शुरुआती अंश: '+String(responseText).slice(0,250));
       renderPackageFields(pkg);
       $('postStatus').textContent='GEMINI • COMPLETE PACKAGE READY';
       $('saveDraft').disabled=false;
-      msg('पूरा Content Package तैयार है। Verify/Edit करके Save करें।','success');
-    }catch(e){$('postStatus').textContent='ERROR';msg(e.message,'error')}
-    finally{btn.disabled=false;btn.textContent='✨ Complete Content Generate करें'}
+      msg('पूरा Content Package तैयार है। उत्तर वाले कमेंट को जाँचकर Save करें।','success');
+    }catch(e){
+      if($('postStatus'))$('postStatus').textContent='ERROR';
+      msg(e.message||'Content Generate नहीं हो पाया।','error');
+      console.error('[Ganit Setu] Content generation failed:',e);
+    }finally{btn.disabled=false;btn.textContent='✨ Complete Content Generate करें'}
   }
   function roundedRect(ctx,x,y,w,h,r){r=Math.min(r,w/2,h/2);ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
   function wrapText(ctx,text,maxWidth){const out=[];for(const para of String(text||'').split(/\n/)){let line='';for(const word of para.trim().split(/\s+/)){const test=line?line+' '+word:word;if(ctx.measureText(test).width<=maxWidth||!line)line=test;else{out.push(line);line=word}}if(line)out.push(line);else out.push('')}return out}
