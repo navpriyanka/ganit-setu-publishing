@@ -261,54 +261,35 @@ Ganit Setu — MP Board Mathematics Learning`,
       const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.error||'YouTube publish failed');return d;
     }
     if(pkg.platform==='whatsapp'){
-      const text=[meta.title,meta.hook,meta.caption||meta.post,meta.cta,meta.hashtags].filter(Boolean).join('\n\n');
-      await navigator.clipboard?.writeText(text); if(window.GanitSetuWhatsAppConnector?.openChannel) window.GanitSetuWhatsAppConnector.openChannel(); else window.open('https://whatsapp.com/channel/0029VbDLOBHICVfrePXZ363D','_blank');
-      return {manual:true};
+      throw new Error('WhatsApp Channel पर auto-publishing उपलब्ध नहीं है। Text copy करके Channel पर manually share करें।');
     }
   }
   async function publishCurrent(){
     if(!currentQuestion)return msg('पहले Question generate करें।','error');
-    if(currentType!=='post')return msg('अभी केवल Text Post publishing चालू है। Image/Video बाद में जोड़े जाएँगे।','error');
     const base=readPackageFields();
-    const post=String(base.post||base.caption||'').trim();
-    if(!post)return msg('पहले Gemini से Text Post generate करें और Preview जाँचें।','error');
     const variants=base.platform_packages||{};
-    const v=variants.facebook&&typeof variants.facebook==='object'?variants.facebook:base;
-    const content={...base,...v,platform_packages:undefined};
-    content.hashtags=Array.isArray(content.hashtags)?content.hashtags.join(' '):(content.hashtags||'');
-    content.keywords=Array.isArray(content.keywords)?content.keywords.join(', '):(content.keywords||'');
-    const pkg={question_id:Number(currentQuestion.id),platform:'facebook',content_type:'post',content,draft:content.post||content.caption||post,media_url:'',video_url:''};
-    const button=$('publishCurrent');
-    if(button){button.disabled=true;button.dataset.oldText=button.textContent;button.textContent='⏳ Facebook पर प्रकाशित कर रहे हैं…'}
-    let outcome;
+    let mediaUrl=generatedImageUrl;
     try{
-      const result=await publishPackage(pkg);
-      outcome={text:'Facebook: पोस्ट प्रकाशित हो गई।'+(result?.external_url?' '+result.external_url:''),kind:'success'};
-    }catch(e){
-      outcome={text:'Facebook Publishing असफल: '+(e?.message||String(e)),kind:'error'};
-    }finally{
-      if(button){button.disabled=false;button.textContent=button.dataset.oldText||'🚀 Publish Reviewed Content';delete button.dataset.oldText}
+      if(generatedImageData&&!mediaUrl){const up=await uploadFile(dataUrlToFile(generatedImageData,`Q${currentQuestion.id}_GANIT_SETU.jpg`),'images',currentQuestion.id);mediaUrl=generatedImageUrl=up.url}
+    }catch(e){return msg('Image upload नहीं हुई: '+e.message,'error')}
+    const platforms=['facebook','instagram','youtube','whatsapp'];
+    const results=[];
+    for(const platform of platforms){
+      const v=variants[platform]&&typeof variants[platform]==='object'?variants[platform]:base;
+      const content={...base,...v,platform_packages:undefined};
+      content.hashtags=Array.isArray(content.hashtags)?content.hashtags.join(' '):(content.hashtags||'');
+      content.keywords=Array.isArray(content.keywords)?content.keywords.join(', '):(content.keywords||'');
+      const pkg={question_id:Number(currentQuestion.id),platform,content_type:platform==='youtube'?'video':(platform==='instagram'?'image':currentType),content,draft:content.post||content.caption||'',media_url:mediaUrl||'',video_url:videoUrl||''};
+      if(platform==='youtube'&&!pkg.video_url){results.push('YouTube: Final Video नहीं बना है, इसलिए publish नहीं किया');continue}
+      if(platform==='instagram'&&!pkg.media_url&&!pkg.video_url){results.push('Instagram: Image/Video नहीं है, इसलिए publish नहीं किया');continue}
+      try{const result=await publishPackage(pkg);results.push(platform==='whatsapp'?'WhatsApp: कंटेंट कॉपी किया; Channel पर मैन्युअल शेयर करें':platform+': सफल'+(result?.external_url?' — '+result.external_url:''))}
+      catch(e){results.push(platform+': असफल — '+(e.message||e))}
     }
-    msg(outcome.text+' Instagram Text-only publishing अभी उपलब्ध नहीं है; YouTube Community publishing सत्यापित नहीं है; WhatsApp पर मैन्युअल शेयर करना होगा।',outcome.kind);
+    msg(results.join(' | '),results.some(x=>x.includes('असफल')||x.includes('नहीं बना')||x.includes('नहीं है'))?'error':'success');
   }
-    function renderReport(){const all=read('gsContentPackages',[]);$('savedCount').textContent=all.length;$('publishedCount').textContent=all.filter(x=>x.status==='published').length;$('pendingCount').textContent=all.filter(x=>x.status!=='published').length;const box=$('savedList');if(!box)return;box.innerHTML=all.slice(0,30).map(p=>`<label class="saved-row"><input type="checkbox" value="${esc(p.id)}"><span><b>Q${esc(p.question_id)}</b> · ${esc(p.platform)} · ${esc(p.content_type)}</span><span class="status-pill">${esc(p.status)}</span></label>`).join('')||'<div class="empty">अभी कोई saved package नहीं है।</div>'}
-  async function publishSelected(){
-    const ids=[...document.querySelectorAll('.saved-row input:checked')].map(x=>x.value);
-    const all=read('gsContentPackages',[]);
-    const selected=all.filter(p=>ids.includes(p.id));
-    if(!selected.length)return msg('पहले saved packages select करें।','error');
-    const facebookPosts=selected.filter(p=>p.platform==='facebook'&&p.content_type==='post');
-    const unsupported=selected.filter(p=>!(p.platform==='facebook'&&p.content_type==='post'));
-    if(!facebookPosts.length)return msg('चुने गए पैकेजों में Facebook Text Post नहीं है। अभी केवल Facebook Text Post प्रकाशित की जा सकती है। WhatsApp को publish बटन से अपने आप नहीं खोला जाएगा।','error');
-    for(const p of facebookPosts){
-      try{await publishPackage(p);p.status='published';p.published_at=new Date().toISOString();delete p.error}
-      catch(e){p.status='failed';p.error=e?.message||String(e)}
-    }
-    write('gsContentPackages',all);renderReport();
-    const failed=facebookPosts.filter(p=>p.status==='failed');
-    msg(`Facebook Text Post: ${facebookPosts.length-failed.length} सफल, ${failed.length} असफल।`+(unsupported.length?` ${unsupported.length} अन्य platform package छोड़े गए; उन्हें इस बटन से publish नहीं किया गया।`:''),failed.length?'error':'success');
-  }
-  function connectPlatform(p){try{if(p==='facebook'&&window.GanitSetuFacebookConnector)return window.GanitSetuFacebookConnector.startOAuth();if(p==='instagram'&&window.GanitSetuInstagramConnector)return window.GanitSetuInstagramConnector.connectInstagram();if(p==='youtube'&&window.GanitSetuYouTubeConnector)return window.GanitSetuYouTubeConnector.connect();if(p==='whatsapp'&&window.GanitSetuWhatsAppConnector)return window.GanitSetuWhatsAppConnector.openChannel();msg('इस platform का connector अभी load नहीं हुआ।','error')}catch(e){msg(e.message,'error')}}
+  function renderReport(){const all=read('gsContentPackages',[]);$('savedCount').textContent=all.length;$('publishedCount').textContent=all.filter(x=>x.status==='published').length;$('pendingCount').textContent=all.filter(x=>x.status!=='published').length;const box=$('savedList');if(!box)return;box.innerHTML=all.slice(0,30).map(p=>`<label class="saved-row"><input type="checkbox" value="${esc(p.id)}"><span><b>Q${esc(p.question_id)}</b> · ${esc(p.platform)} · ${esc(p.content_type)}</span><span class="status-pill">${esc(p.status)}</span></label>`).join('')||'<div class="empty">अभी कोई saved package नहीं है।</div>'}
+  async function publishSelected(){const ids=[...document.querySelectorAll('.saved-row input:checked')].map(x=>x.value);const all=read('gsContentPackages',[]);const selected=all.filter(p=>ids.includes(p.id));if(!selected.length)return msg('पहले saved packages select करें।','error');for(const p of selected){try{await publishPackage(p);p.status='published';p.published_at=new Date().toISOString()}catch(e){p.status='failed';p.error=e.message}}write('gsContentPackages',all);renderReport();msg('Selected packages की publishing प्रक्रिया पूरी हुई।','success')}
+  function connectPlatform(p){try{if(p==='facebook'&&window.GanitSetuFacebookConnector)return window.GanitSetuFacebookConnector.startOAuth();if(p==='instagram'&&window.GanitSetuInstagramConnector)return window.GanitSetuInstagramConnector.connectInstagram();if(p==='youtube'&&window.GanitSetuYouTubeConnector)return window.GanitSetuYouTubeConnector.connect();if(p==='whatsapp'){window.open('https://www.whatsapp.com/channel/0029VbDLOBHICVfrePXZ363D','_blank','noopener,noreferrer');return;}msg('इस platform का connector अभी load नहीं हुआ।','error')}catch(e){msg(e.message,'error')}}
   function renderQuestion(q){
     currentQuestion=q||null;
     const box=$('currentQuestion');
