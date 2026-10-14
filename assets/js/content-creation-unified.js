@@ -117,7 +117,7 @@ Ganit Setu — MP Board Mathematics Learning`,
       const canPublish=platform==='facebook' || platform==='whatsapp' || (platform==='instagram'&&currentType!=='post'&&!!(generatedImageUrl||generatedImageData||videoUrl)) || (platform==='youtube'&&(isYouTubeTextPost||!!videoUrl&&currentType!=='post'));
       const publishLabel=platform==='whatsapp'?'↗ Copy + Open WhatsApp Channel':isYouTubeTextPost?'↗ Open Community + Copy':canPublish?'🚀 Publish':'Publish unavailable';
       const pill=(isYouTubeTextPost||platform==='whatsapp')?'Copy + Open':canPublish?'Publish available':'Preview only';
-      return `<article class="preview-platform-card" data-preview-platform="${platform}"><div class="preview-card-head"><h3>${PLATFORM_LABELS[platform]}</h3><span class="platform-pill">${pill}</span></div>${note?`<p class="preview-note">${esc(note)}</p>`:''}<pre>${esc(caption)}</pre><div class="preview-card-actions"><button type="button" class="btn ghost copy-platform" data-copy-platform="${platform}">📋 Copy Preview</button><button type="button" class="btn purple platform-publish" data-publish-platform="${platform}" ${canPublish?'':'disabled'}>${publishLabel}</button><button type="button" class="btn green platform-schedule" data-schedule-platform="${platform}" ${canPublish&&!isYouTubeTextPost?'':'disabled'}>🗓️ Schedule</button></div></article>`;
+      return `<article class="preview-platform-card" data-preview-platform="${platform}"><div class="preview-card-head"><h3>${PLATFORM_LABELS[platform]}</h3><span class="platform-pill">${pill}</span></div>${note?`<p class="preview-note">${esc(note)}</p>`:''}<pre>${esc(caption)}</pre><div class="preview-card-actions"><button type="button" class="btn ghost copy-platform" data-copy-platform="${platform}">📋 Copy Preview</button><button type="button" class="btn purple platform-publish" data-publish-platform="${platform}" ${canPublish?'':'disabled'}>${publishLabel}</button></div></article>`;
     }).join('');
     box.querySelectorAll('[data-copy-platform]').forEach(btn=>btn.addEventListener('click',async()=>{
       const platform=btn.dataset.copyPlatform;
@@ -138,7 +138,6 @@ Ganit Setu — MP Board Mathematics Learning`,
       }catch(e){msg('ऑटो-कॉपी नहीं हो पाया। Preview के टेक्स्ट पर क्लिक करके Ctrl+A, Ctrl+C करें।','error');}
     }));
     box.querySelectorAll('[data-publish-platform]').forEach(btn=>btn.addEventListener('click',()=>publishOnePlatform(btn.dataset.publishPlatform)));
-    box.querySelectorAll('[data-schedule-platform]').forEach(btn=>btn.addEventListener('click',()=>schedulePlatforms([btn.dataset.schedulePlatform])));
   }
   async function makeCurrentPlatformPackage(platform){
     if(!currentQuestion)throw new Error('पहले Question generate करें।');
@@ -519,7 +518,7 @@ Ganit Setu — MP Board Mathematics Learning`,
     document.querySelectorAll('[data-platform]').forEach(b=>b.onclick=e=>{if(e.target.closest('.platform-connect'))return;msg('Platform चुनने की जरूरत नहीं है—कंटेंट चारों प्लेटफॉर्म के लिए एक साथ तैयार होगा।','info')});
     document.querySelectorAll('[data-type]').forEach(b=>b.onclick=()=>{currentType=b.dataset.type;updateState()});
     document.querySelectorAll('.platform-connect').forEach(b=>b.onclick=e=>{e.stopPropagation();connectPlatform(b.dataset.connect)});
-    $('generatePost').onclick=generatePost;$('generateImage').onclick=generateImage;$('createVideo').onclick=videoModal;$('savePackage').onclick=savePackage;$('publishCurrent').onclick=publishCurrent;$('publishAllNow')?.addEventListener('click',publishAllCurrent);$('scheduleAll')?.addEventListener('click',()=>schedulePlatforms(allowedPlatforms()));
+    $('generatePost').onclick=generatePost;$('generateImage').onclick=generateImage;$('createVideo').onclick=videoModal;$('savePackage').onclick=savePackage;
     $('previewPackage').onclick=()=>{const p=readPackageFields();$('previewQuestion').textContent=currentQuestion?`Q${currentQuestion.id}`:'—';$('previewText').textContent=JSON.stringify(p,null,2);$('previewImage').src=generatedImageData||generatedImageUrl||'';$('previewModal').hidden=false};$('closePreview').onclick=()=>$('previewModal').hidden=true;$('closeVideo').onclick=()=>{$('videoModal').hidden=true;$('videoFrame').src=''};
     window.addEventListener('message',e=>{if(e.data?.type==='GS_VIDEO_READY'&&currentQuestion&&String(e.data.question_id)===String(currentQuestion.id)){videoUrl=e.data.video_url||'';$('videoStatus').textContent='✅ Final Video Ready';$('videoLink').href=videoUrl;$('videoLink').hidden=!videoUrl;msg('Final video तैयार है। अब Save करके platform publish कर सकते हैं।','success')}})
   }
