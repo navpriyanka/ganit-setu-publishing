@@ -254,8 +254,8 @@ Ganit Setu — MP Board Mathematics Learning`,
     if(!currentQuestion)return msg('पहले Question generate करें।','error');
     const content=readPackageFields(); const pkg={question_id:currentQuestion.id,platform:currentPlatform,content_type:currentType,content,draft:content.post||'',media_url:generatedImageUrl,video_url:videoUrl};
     try{
-      if(currentPlatform==='instagram'&&!pkg.media_url&&generatedImageData){const up=await uploadFile(dataUrlToFile(generatedImageData,`Q${currentQuestion.id}.jpg`),'instagram',currentQuestion.id);generatedImageUrl=up.url;pkg.media_url=up.url}
-      await publishPackage(pkg);msg(currentPlatform==='whatsapp'?'WhatsApp Channel के लिए content copy हो गया और Channel खुल गया।':`✅ ${currentPlatform} publish सफल हुआ।`,'success');
+      if(['instagram','facebook'].includes(currentPlatform)&&['image','video'].includes(currentType)&&!pkg.media_url&&generatedImageData){const up=await uploadFile(dataUrlToFile(generatedImageData,`Q${currentQuestion.id}.png`),currentPlatform,currentQuestion.id);generatedImageUrl=up.url;pkg.media_url=up.url}
+      await publishPackage(pkg);msg(currentPlatform==='whatsapp'?'WhatsApp Channel के लिए content copy हो गया और Channel खुल गया।':`✅ ${currentPlatform} publish/upload सफल हुआ।`,'success');
     }catch(e){msg(e.message,'error')}
   }
   function renderReport(){const all=read('gsContentPackages',[]);$('savedCount').textContent=all.length;$('publishedCount').textContent=all.filter(x=>x.status==='published').length;$('pendingCount').textContent=all.filter(x=>x.status!=='published').length;const box=$('savedList');if(!box)return;box.innerHTML=all.slice(0,30).map(p=>`<label class="saved-row"><input type="checkbox" value="${esc(p.id)}"><span><b>Q${esc(p.question_id)}</b> · ${esc(p.platform)} · ${esc(p.content_type)}</span><span class="status-pill">${esc(p.status)}</span></label>`).join('')||'<div class="empty">अभी कोई saved package नहीं है।</div>'}
