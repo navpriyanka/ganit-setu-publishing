@@ -50,12 +50,13 @@ Ganit Setu — MP Board Mathematics Learning`,
   };
   const promptKey='gs_content_master_prompts_v1';
   function getMasterPrompts(){try{return {...DEFAULT_MASTER_PROMPTS,...JSON.parse(localStorage.getItem(promptKey)||'{}')}}catch(e){return {...DEFAULT_MASTER_PROMPTS}}}
+  function persistMasterPrompts(all){try{localStorage.setItem(promptKey,JSON.stringify(all));const check=JSON.parse(localStorage.getItem(promptKey)||'{}');if(!check||typeof check!=='object')throw new Error('Storage verification failed');return true}catch(e){throw new Error('Master Prompt सेव नहीं हो पाया। ब्राउज़र की site storage अनुमति जाँचें। '+(e.message||''))}}
   function selectedMasterPrompt(){const all=getMasterPrompts();return all[$('postType')?.value||'question']||all.question}
   function initMasterPromptUI(){
     const type=$('masterPromptType'),area=$('masterPromptText'),status=$('masterPromptStatus');if(!type||!area)return;
     const fill=()=>{area.value=getMasterPrompts()[type.value]||'';if(status)status.textContent=''};
     type.addEventListener('change',fill);fill();
-    $('saveMasterPrompt')?.addEventListener('click',()=>{const all=getMasterPrompts();all[type.value]=area.value.trim()||DEFAULT_MASTER_PROMPTS[type.value];localStorage.setItem(promptKey,JSON.stringify(all));if(status)status.textContent='सेव हो गया ✓';});
+    const save=$('saveMasterPrompt'); if(save){save.type='button';save.addEventListener('click',(ev)=>{ev.preventDefault();try{const all=getMasterPrompts();all[type.value]=area.value.trim()||DEFAULT_MASTER_PROMPTS[type.value];persistMasterPrompts(all);if(status)status.textContent='सेव हो गया ✓';msg('Master Prompt सेव हो गया। पेज refresh करके भी सुरक्षित रहना चाहिए।','success')}catch(err){if(status)status.textContent=err.message;msg(err.message,'error')}})}
   }
   function packagePrompt(){
     const q=currentQuestion;
@@ -120,6 +121,7 @@ Ganit Setu — MP Board Mathematics Learning`,
       const token=await session();
       const type=$('postType').value,language=$('postLanguage').value;
       const topic=packagePrompt();
+      if(!topic.includes('MASTER PROMPT:'))throw new Error('Master Prompt नहीं मिला। पहले Prompt सेव/चुनें।');
       const r=await fetch(AI_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`,'apikey':ANON},body:JSON.stringify({type,classLevel:String(currentQuestion?.class_level||$('ccClass')?.value||9),language,topic})});
       const raw=await r.text();let d={};try{d=JSON.parse(raw)}catch{d={error:raw}}
       if(!r.ok||!d.text)throw new Error(d.error||d.message||`Gemini error ${r.status}`);
@@ -248,6 +250,51 @@ Ganit Setu — MP Board Mathematics Learning`,
   function renderReport(){const all=read('gsContentPackages',[]);$('savedCount').textContent=all.length;$('publishedCount').textContent=all.filter(x=>x.status==='published').length;$('pendingCount').textContent=all.filter(x=>x.status!=='published').length;const box=$('savedList');if(!box)return;box.innerHTML=all.slice(0,30).map(p=>`<label class="saved-row"><input type="checkbox" value="${esc(p.id)}"><span><b>Q${esc(p.question_id)}</b> · ${esc(p.platform)} · ${esc(p.content_type)}</span><span class="status-pill">${esc(p.status)}</span></label>`).join('')||'<div class="empty">अभी कोई saved package नहीं है।</div>'}
   async function publishSelected(){const ids=[...document.querySelectorAll('.saved-row input:checked')].map(x=>x.value);const all=read('gsContentPackages',[]);const selected=all.filter(p=>ids.includes(p.id));if(!selected.length)return msg('पहले saved packages select करें।','error');for(const p of selected){try{await publishPackage(p);p.status='published';p.published_at=new Date().toISOString()}catch(e){p.status='failed';p.error=e.message}}write('gsContentPackages',all);renderReport();msg('Selected packages की publishing प्रक्रिया पूरी हुई।','success')}
   function connectPlatform(p){try{if(p==='facebook'&&window.GanitSetuFacebookConnector)return window.GanitSetuFacebookConnector.startOAuth();if(p==='instagram'&&window.GanitSetuInstagramConnector)return window.GanitSetuInstagramConnector.connectInstagram();if(p==='youtube'&&window.GanitSetuYouTubeConnector)return window.GanitSetuYouTubeConnector.connect();if(p==='whatsapp'&&window.GanitSetuWhatsAppConnector)return window.GanitSetuWhatsAppConnector.openChannel();msg('इस platform का connector अभी load नहीं हुआ।','error')}catch(e){msg(e.message,'error')}}
+  function renderQuestion(q){
+    currentQuestion=q||null;
+    const box=$('currentQuestion');
+    if(!box)return;
+    if(!q){box.innerHTML='<div class="empty">कोई प्रश्न नहीं मिला। Class/Chapter बदलकर फिर कोशिश करें।</div>';return}
+    box.innerHTML=`<div class="question-card"><b>Q${esc(q.id)} · Class ${esc(q.class_level)} · Chapter ${esc(q.chapter_number)} — ${esc(q.chapter_name||'')}</b><p>${esc(q.question_text||'')}</p><div>A) ${esc(q.option_a||'')}<br>B) ${esc(q.option_b||'')}<br>C) ${esc(q.option_c||'')}<br>D) ${esc(q.option_d||'')}</div><small>सही उत्तर और व्याख्या प्रकाशित करने से पहले जाँचें।</small></div>`;
+    write('gsCurrentContentQuestion',q);
+    if($('workspaceQuestion'))$('workspaceQuestion').textContent=`Q${q.id} · Class ${q.class_level} · Chapter ${q.chapter_number}`;
+    updatePublishAvailability();
+  }
+  async function loadChapters(){
+    const select=$('ccChapter'); if(!select)return;
+    const cls=Number($('ccClass')?.value||9);
+    try{
+      const {data,error}=await sb.from('questions').select('chapter_number,chapter_name').eq('class_level',cls).order('chapter_number',{ascending:true}).limit(1000);
+      if(error)throw error;
+      const map=new Map();(data||[]).forEach(r=>{if(r.chapter_number!=null&&!map.has(String(r.chapter_number)))map.set(String(r.chapter_number),r.chapter_name||'')});
+      const old=select.value;select.innerHTML='<option value="all">All Chapters</option>'+[...map.entries()].map(([n,name])=>`<option value="${esc(n)}">Chapter ${esc(n)}${name?' — '+esc(name):''}</option>`).join('');
+      if([...select.options].some(o=>o.value===old))select.value=old;
+    }catch(e){msg('Chapter list लोड नहीं हुई: '+(e.message||e),'error')}
+  }
+  async function generateQuestion(){
+    const btn=$('generateQuestion'); if(btn){btn.disabled=true;btn.textContent='⏳ प्रश्न खोज रहे हैं...'}
+    try{
+      const cls=Number($('ccClass')?.value||9),chapter=$('ccChapter')?.value||'all';
+      let query=sb.from('questions').select('id,class_level,chapter_number,chapter_name,question_text,option_a,option_b,option_c,option_d,correct_option,hint,explanation').eq('class_level',cls);
+      if(chapter!=='all')query=query.eq('chapter_number',Number(chapter));
+      const {data,error}=await query.limit(500);
+      if(error)throw error;
+      const rows=(data||[]).filter(q=>q.question_text&&q.option_a!=null&&q.option_b!=null&&q.option_c!=null&&q.option_d!=null);
+      if(!rows.length)throw new Error(`Class ${cls}${chapter!=='all'?' Chapter '+chapter:''} के लिए उपलब्ध विकल्पों सहित प्रश्न नहीं मिला।`);
+      const prior=read('gsRecentQuestionIds',[]);let candidates=rows.filter(q=>!prior.includes(String(q.id)));if(!candidates.length)candidates=rows;
+      const q=candidates[Math.floor(Math.random()*candidates.length)];
+      write('gsRecentQuestionIds',[String(q.id),...prior.filter(id=>String(id)!==String(q.id))].slice(0,Math.min(100,Math.max(1,rows.length-1))));
+      renderQuestion(q);msg(`नया प्रश्न लोड हो गया: Q${q.id}`,'success');
+    }catch(e){msg('Question load नहीं हुआ: '+(e.message||e),'error')}
+    finally{if(btn){btn.disabled=false;btn.textContent='✨ Generate New Question'}const next=$('newQuestion');if(next)next.disabled=false}
+  }
+  function updateState(){
+    document.querySelectorAll('[data-platform]').forEach(el=>el.classList.toggle('active',el.dataset.platform===currentPlatform));
+    document.querySelectorAll('[data-type]').forEach(el=>el.classList.toggle('active',el.dataset.type===currentType));
+    if($('currentPlatform'))$('currentPlatform').textContent='सभी प्लेटफॉर्म के लिए कंटेंट';
+    if($('currentType'))$('currentType').textContent=currentType;
+    updatePublishAvailability();
+  }
   function bind(){
     initMasterPromptUI();
     $('postType')?.addEventListener('change',()=>{const mt=$('masterPromptType');if(mt){mt.value=$('postType').value;mt.dispatchEvent(new Event('change'))}});
