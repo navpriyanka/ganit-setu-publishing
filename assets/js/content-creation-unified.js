@@ -380,12 +380,16 @@ Ganit Setu — MP Board Mathematics Learning`,
         ctx.fillStyle='#ffffff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`800 ${S(40)}px Arial,sans-serif`;ctx.fillText(o.label,X(ox+47),Y(oy+oh/2+1));
         const val=fitLines(ctx,String(o.text||''),X(ow-100),2,S(44),S(30));
         ctx.textAlign='left';ctx.textBaseline='middle';ctx.font=`800 ${val.size}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;ctx.fillStyle='#101d52';
-        const vGap=S(3),vTotal=val.lines.length*(val.size+vGap)-vGap;
-        val.lines.forEach((line,i)=>ctx.fillText(line,X(ox+92),Y(oy+oh/2)-vTotal/2+i*(val.size+vGap),X(ow-105)));
+        const vGap=S(3);
+        // Keep every option value vertically centered in its own card, including wrapped labels.
+        val.lines.forEach((line,i)=>{
+          const lineOffset=(i-(val.lines.length-1)/2)*(val.size+vGap);
+          ctx.fillText(line,X(ox+92),Y(oy+oh/2)+lineOffset,X(ow-105));
+        });
       }
 
       // Fixed-size engagement callout, always in the clear right-hand space above the teacher's finger.
-      const cx=420,cy=755,cw=425,ch=112;
+      const cx=420,cy=785,cw=425,ch=112;
       ctx.save();ctx.shadowColor='rgba(13,48,91,.22)';ctx.shadowBlur=S(11);ctx.shadowOffsetY=Y(4);
       roundedRect(ctx,X(cx),Y(cy),X(cw),Y(ch),S(24));ctx.fillStyle='#123b85';ctx.fill();ctx.restore();
       ctx.lineWidth=S(4);ctx.strokeStyle='#ffcf28';roundedRect(ctx,X(cx),Y(cy),X(cw),Y(ch),S(24));ctx.stroke();
@@ -393,9 +397,9 @@ Ganit Setu — MP Board Mathematics Learning`,
       ctx.fillStyle='#123b85';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`900 ${S(25)}px Arial,sans-serif`;ctx.fillText('•••',X(cx+48),Y(cy+ch/2));
       ctx.fillStyle='#ffffff';ctx.textAlign='center';ctx.textBaseline='middle';
       ctx.font=`900 ${S(31)}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
-      ctx.fillText('अपना उत्तर',X(cx+260),Y(cy+43),X(cw-105));
+      ctx.fillText('अपना उत्तर',X(cx+260),Y(cy+43),X(cw-125));
       ctx.fillStyle='#ffdf32';ctx.font=`900 ${S(31)}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
-      ctx.fillText('कमेंट में लिखें',X(cx+260),Y(cy+79),X(cw-105));
+      ctx.fillText('कमेंट में लिखें',X(cx+260),Y(cy+79),X(cw-125));
       generatedImageData=c.toDataURL('image/png');
       $('imagePreview').src=generatedImageData;$('imagePreviewWrap').hidden=false;$('imageStatus').textContent='FIXED TEMPLATE • DESIGNED QUESTION INSERTED';
       updatePublishAvailability();renderPlatformPreviews();msg('Question को खाली बोर्ड में डिज़ाइन के साथ फिट कर दिया गया।','success');
