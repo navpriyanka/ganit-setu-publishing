@@ -338,8 +338,9 @@ Ganit Setu — MP Board Mathematics Learning`,
       roundedRect(ctx,X(100),Y(155),X(740),Y(62),S(18));
       ctx.fillStyle='#123b85';ctx.fill();ctx.restore();
       ctx.fillStyle='#ffdf32';ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.font=`800 ${S(25)}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
       const chapterLine=`कक्षा ${currentQuestion.class_level}  •  अध्याय ${currentQuestion.chapter_number} — ${currentQuestion.chapter_name||''}`;
+      const chapterFit=fitLines(ctx,chapterLine,X(690),1,S(31),S(22));
+      ctx.font=`800 ${chapterFit.size}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
       ctx.fillText(chapterLine,X(470),Y(186),X(700));
 
       // Large readable question card.
@@ -347,11 +348,15 @@ Ganit Setu — MP Board Mathematics Learning`,
       ctx.save();ctx.shadowColor='rgba(15,44,80,.15)';ctx.shadowBlur=S(12);ctx.shadowOffsetY=Y(4);
       roundedRect(ctx,X(qx),Y(qy),X(qw),Y(qh),S(25));ctx.fillStyle='#fffdf7';ctx.fill();ctx.restore();
       ctx.lineWidth=S(5);ctx.strokeStyle='#f5a623';roundedRect(ctx,X(qx),Y(qy),X(qw),Y(qh),S(25));ctx.stroke();
-      // Small yellow title label.
-      roundedRect(ctx,X(qx+18),Y(qy-20),X(310),Y(48),S(18));ctx.fillStyle='#ffdf32';ctx.fill();
+      // Bold, high-contrast title label for the question section.
+      ctx.save();ctx.shadowColor='rgba(245,166,35,.22)';ctx.shadowBlur=S(7);ctx.shadowOffsetY=Y(2);
+      roundedRect(ctx,X(qx+14),Y(qy-25),X(360),Y(60),S(22));ctx.fillStyle='#ffdf32';ctx.fill();ctx.restore();
+      ctx.lineWidth=S(3);ctx.strokeStyle='#f5a623';roundedRect(ctx,X(qx+14),Y(qy-25),X(360),Y(60),S(22));ctx.stroke();
+      ctx.beginPath();ctx.arc(X(qx+47),Y(qy+5),S(20),0,Math.PI*2);ctx.fillStyle='#123b85';ctx.fill();
+      ctx.fillStyle='#ffdf32';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`900 ${S(27)}px Arial,sans-serif`;ctx.fillText('?',X(qx+47),Y(qy+5));
       ctx.fillStyle='#102b65';ctx.textAlign='left';ctx.textBaseline='middle';
-      ctx.font=`800 ${S(23)}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
-      ctx.fillText('आज का गणित प्रश्न',X(qx+42),Y(qy+4),X(280));
+      ctx.font=`900 ${S(29)}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
+      ctx.fillText('आज का गणित प्रश्न',X(qx+78),Y(qy+5),X(285));
       const question=fitLines(ctx,currentQuestion.question_text,X(qw-60),3,S(43),S(30));
       ctx.font=`800 ${question.size}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
       ctx.fillStyle='#101d52';ctx.textAlign='center';ctx.textBaseline='middle';
@@ -379,16 +384,18 @@ Ganit Setu — MP Board Mathematics Learning`,
         val.lines.forEach((line,i)=>ctx.fillText(line,X(ox+92),Y(oy+oh/2)-vTotal/2+i*(val.size+vGap),X(ow-105)));
       }
 
-      // Compact engagement callout in the open right-hand area, above the teacher's pointing finger.
-      // It intentionally avoids the teacher's head and does not cover the question/options.
-      const cx=455,cy=760,cw=390,ch=88;
-      ctx.save();ctx.shadowColor='rgba(13,48,91,.18)';ctx.shadowBlur=S(9);ctx.shadowOffsetY=Y(4);
-      roundedRect(ctx,X(cx),Y(cy),X(cw),Y(ch),S(20));ctx.fillStyle='#123b85';ctx.fill();ctx.restore();
-      ctx.lineWidth=S(3);ctx.strokeStyle='#ffcf28';roundedRect(ctx,X(cx),Y(cy),X(cw),Y(ch),S(20));ctx.stroke();
-      ctx.beginPath();ctx.arc(X(cx+43),Y(cy+ch/2),S(27),0,Math.PI*2);ctx.fillStyle='#ffdf32';ctx.fill();
-      ctx.fillStyle='#123b85';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`800 ${S(24)}px Arial,sans-serif`;ctx.fillText('•••',X(cx+43),Y(cy+ch/2));
-      ctx.fillStyle='#ffffff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`800 ${S(29)}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
-      ctx.fillText('उत्तर कमेंट करें',X(cx+230),Y(cy+ch/2),X(cw-95));
+      // Fixed-size engagement callout, always in the clear right-hand space above the teacher's finger.
+      const cx=420,cy=755,cw=425,ch=112;
+      ctx.save();ctx.shadowColor='rgba(13,48,91,.22)';ctx.shadowBlur=S(11);ctx.shadowOffsetY=Y(4);
+      roundedRect(ctx,X(cx),Y(cy),X(cw),Y(ch),S(24));ctx.fillStyle='#123b85';ctx.fill();ctx.restore();
+      ctx.lineWidth=S(4);ctx.strokeStyle='#ffcf28';roundedRect(ctx,X(cx),Y(cy),X(cw),Y(ch),S(24));ctx.stroke();
+      ctx.beginPath();ctx.arc(X(cx+48),Y(cy+ch/2),S(32),0,Math.PI*2);ctx.fillStyle='#ffdf32';ctx.fill();
+      ctx.fillStyle='#123b85';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`900 ${S(25)}px Arial,sans-serif`;ctx.fillText('•••',X(cx+48),Y(cy+ch/2));
+      ctx.fillStyle='#ffffff';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.font=`900 ${S(31)}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
+      ctx.fillText('अपना उत्तर',X(cx+260),Y(cy+43),X(cw-105));
+      ctx.fillStyle='#ffdf32';ctx.font=`900 ${S(31)}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
+      ctx.fillText('कमेंट में लिखें',X(cx+260),Y(cy+79),X(cw-105));
       generatedImageData=c.toDataURL('image/png');
       $('imagePreview').src=generatedImageData;$('imagePreviewWrap').hidden=false;$('imageStatus').textContent='FIXED TEMPLATE • DESIGNED QUESTION INSERTED';
       updatePublishAvailability();renderPlatformPreviews();msg('Question को खाली बोर्ड में डिज़ाइन के साथ फिट कर दिया गया।','success');
