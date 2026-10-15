@@ -290,16 +290,15 @@ Ganit Setu — MP Board Mathematics Learning`,
   // IMAGE MODE: fixed blank template + programmatic text only.
   // No AI image generation is used here. Put the approved blank template at:
   // assets/images/content-post-template.png
-  const IMAGE_TEMPLATE_URL='assets/images/content-post-template.png';
+  const IMAGE_TEMPLATE_URL='assets/images/content-post-template.png?v=20261015-final';
   const IMAGE_TEMPLATE_CONFIG={
-    width:1080,height:1350,
-    // These coordinates are the only values to adjust when the final blank template is locked.
-    headerX:80, headerY:210, headerWidth:920,
-    questionX:90, questionY:400, questionWidth:900,
-    optionX:110, optionStartY:760, optionGap:100,
-    footerX:540, footerY:1265
+    width:941,height:1672,
+    // Coordinates tuned to the approved 9:16 Ganit Setu master image.
+    headerX:92, headerY:176, headerWidth:750,
+    questionX:92, questionY:280, questionWidth:750,
+    optionX:112, optionStartY:690, optionGap:84,
+    footerX:470, footerY:1090
   };
-
   function drawWrappedText(ctx,text,x,y,maxWidth,lineHeight){
     const words=String(text||'').split(/\s+/); let line='';
     for(const word of words){
@@ -339,8 +338,9 @@ Ganit Setu — MP Board Mathematics Learning`,
       ctx.fillText('🤔 आपका उत्तर क्या है? Comment करके बताइए!',cfg.footerX,cfg.footerY);
 
       generatedImageData=c.toDataURL('image/png');
-      $('imagePreview').src=generatedImageData;$('imagePreviewWrap').hidden=false;$('imageStatus').textContent='FIXED TEMPLATE • QUESTION INSERTED';
-      updatePublishAvailability();msg('Fixed template में Question सफलतापूर्वक लगाया गया।','success');
+      $('imagePreview').src=generatedImageData;$('imagePreviewWrap').hidden=false;$('imageStatus').textContent='MASTER TEMPLATE • QUESTION + OPTIONS PREVIEW READY';
+      const pc=$('imagePreviewPlatformCards');if(pc){pc.innerHTML=allowedPlatforms().map(platform=>`<div class="platform"><b>${PLATFORM_LABELS[platform]}</b><img src="${generatedImageData}" alt="${PLATFORM_LABELS[platform]} image preview" style="display:block;width:100%;max-height:260px;object-fit:contain;margin-top:8px;border-radius:8px"><small>इसी तैयार इमेज का Preview</small></div>`).join('');}
+      renderPlatformPreviews();updatePublishAvailability();msg('Master template पर Question वाली image तैयार है। नीचे platform-wise preview देखकर Publish करें।','success');
     }catch(e){
       msg(`Blank template नहीं मिला। ${IMAGE_TEMPLATE_URL} पर आपका approved template रखें।`,'error');
     }finally{btn.disabled=false;btn.textContent='🖼️ Template में Question डालें'}
