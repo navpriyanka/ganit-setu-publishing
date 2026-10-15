@@ -454,7 +454,7 @@ Ganit Setu — MP Board Mathematics Learning`,
     setConnectionStatus('whatsapp','मौजूदा Ganit Setu Channel • Manual Share',true);
   }
   async function connectPlatform(p){
-    if(p==='whatsapp'){window.open('https://whatsapp.com/channel/0029VbDLOBHICVfrePXZ363D','_blank','noopener');return;}
+    if(p==='whatsapp'){msg('WhatsApp Channel तैयार है। चैनल केवल नीचे WhatsApp के Copy + Open बटन दबाने पर खुलेगा।','info');return;}
     await refreshConnectionStatuses();
     const el=document.querySelector(`[data-status="${p}"]`);
     if(el?.textContent.includes('✅ Connected')){msg(PLATFORM_LABELS[p]+' पहले से connected है।','success');return;}
