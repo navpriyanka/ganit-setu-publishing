@@ -104,7 +104,7 @@ Ganit Setu — MP Board Mathematics Learning`,
   }
   function renderPlatformPreviews(){
     const box=$('allPlatformPreviews');if(!box)return;
-    if(!generatedPackage){box.innerHTML='<div class="empty">पहले Content Generate करें। फिर हर उपलब्ध प्लेटफॉर्म का Preview यहाँ दिखेगा।</div>';return;}
+    if(!generatedPackage&&!(currentType==='image'&&generatedImageData)){box.innerHTML='<div class="empty">पहले Content Generate करें या Image सेक्शन में Master Template पर Question लिखें।</div>';return;}
     const base=readPackageFields(), variants=base.platform_packages||{};
     box.innerHTML=allowedPlatforms().map(platform=>{
       const v=variants[platform]&&typeof variants[platform]==='object'?variants[platform]:base;
@@ -117,7 +117,7 @@ Ganit Setu — MP Board Mathematics Learning`,
       const canPublish=platform==='facebook' || platform==='whatsapp' || (platform==='instagram'&&currentType!=='post'&&!!(generatedImageUrl||generatedImageData||videoUrl)) || (platform==='youtube'&&(isYouTubeTextPost||!!videoUrl&&currentType!=='post'));
       const publishLabel=platform==='whatsapp'?'↗ Copy + Open WhatsApp Channel':isYouTubeTextPost?'↗ Open Community + Copy':canPublish?'🚀 Publish':'Publish unavailable';
       const pill=(isYouTubeTextPost||platform==='whatsapp')?'Copy + Open':canPublish?'Publish available':'Preview only';
-      return `<article class="preview-platform-card" data-preview-platform="${platform}"><div class="preview-card-head"><h3>${PLATFORM_LABELS[platform]}</h3><span class="platform-pill">${pill}</span></div>${note?`<p class="preview-note">${esc(note)}</p>`:''}<pre>${esc(caption)}</pre><div class="preview-card-actions"><button type="button" class="btn ghost copy-platform" data-copy-platform="${platform}">📋 Copy Preview</button><button type="button" class="btn purple platform-publish" data-publish-platform="${platform}" ${canPublish?'':'disabled'}>${publishLabel}</button></div></article>`;
+      const imagePreview=currentType==='image'&&generatedImageData?`<img src="${generatedImageData}" alt="${PLATFORM_LABELS[platform]} image preview" style="display:block;width:100%;max-width:320px;max-height:520px;object-fit:contain;margin:10px auto;border-radius:10px">`:'';return `<article class="preview-platform-card" data-preview-platform="${platform}"><div class="preview-card-head"><h3>${PLATFORM_LABELS[platform]}</h3><span class="platform-pill">${pill}</span></div>${note?`<p class="preview-note">${esc(note)}</p>`:''}${imagePreview}<pre>${esc(caption)}</pre><div class="preview-card-actions"><button type="button" class="btn ghost copy-platform" data-copy-platform="${platform}">📋 Copy Preview</button><button type="button" class="btn purple platform-publish" data-publish-platform="${platform}" ${canPublish?'':'disabled'}>${publishLabel}</button></div></article>`;
     }).join('');
     box.querySelectorAll('[data-copy-platform]').forEach(btn=>btn.addEventListener('click',async()=>{
       const platform=btn.dataset.copyPlatform;
@@ -290,15 +290,16 @@ Ganit Setu — MP Board Mathematics Learning`,
   // IMAGE MODE: fixed blank template + programmatic text only.
   // No AI image generation is used here. Put the approved blank template at:
   // assets/images/content-post-template.png
-  const IMAGE_TEMPLATE_URL='assets/images/content-post-template.png?v=20261015-final';
+  const IMAGE_TEMPLATE_URL='assets/images/content-post-template.png';
   const IMAGE_TEMPLATE_CONFIG={
-    width:941,height:1672,
-    // Coordinates tuned to the approved 9:16 Ganit Setu master image.
-    headerX:92, headerY:176, headerWidth:750,
-    questionX:92, questionY:280, questionWidth:750,
-    optionX:112, optionStartY:690, optionGap:84,
-    footerX:470, footerY:1090
+    width:1024,height:1536,
+    // Coordinates tuned for the approved 2:3 portrait master template.
+    headerX:90, headerY:330, headerWidth:844,
+    questionX:100, questionY:455, questionWidth:824,
+    optionX:115, optionStartY:850, optionGap:82,
+    footerX:512, footerY:1400
   };
+
   function drawWrappedText(ctx,text,x,y,maxWidth,lineHeight){
     const words=String(text||'').split(/\s+/); let line='';
     for(const word of words){
@@ -338,9 +339,8 @@ Ganit Setu — MP Board Mathematics Learning`,
       ctx.fillText('🤔 आपका उत्तर क्या है? Comment करके बताइए!',cfg.footerX,cfg.footerY);
 
       generatedImageData=c.toDataURL('image/png');
-      $('imagePreview').src=generatedImageData;$('imagePreviewWrap').hidden=false;$('imageStatus').textContent='MASTER TEMPLATE • QUESTION + OPTIONS PREVIEW READY';
-      const pc=$('imagePreviewPlatformCards');if(pc){pc.innerHTML=allowedPlatforms().map(platform=>`<div class="platform"><b>${PLATFORM_LABELS[platform]}</b><img src="${generatedImageData}" alt="${PLATFORM_LABELS[platform]} image preview" style="display:block;width:100%;max-height:260px;object-fit:contain;margin-top:8px;border-radius:8px"><small>इसी तैयार इमेज का Preview</small></div>`).join('');}
-      renderPlatformPreviews();updatePublishAvailability();msg('Master template पर Question वाली image तैयार है। नीचे platform-wise preview देखकर Publish करें।','success');
+      $('imagePreview').src=generatedImageData;$('imagePreviewWrap').hidden=false;$('imageStatus').textContent='FIXED TEMPLATE • QUESTION INSERTED';
+      updatePublishAvailability();renderPlatformPreviews();msg('Master template पर Question सफलतापूर्वक लगाया गया।','success');
     }catch(e){
       msg(`Blank template नहीं मिला। ${IMAGE_TEMPLATE_URL} पर आपका approved template रखें।`,'error');
     }finally{btn.disabled=false;btn.textContent='🖼️ Template में Question डालें'}
