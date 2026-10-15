@@ -12,6 +12,12 @@
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
   const read=(k,d=[])=>{try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch{return d}};
   const write=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+  const questionsByType=read('gsContentQuestionsByType',{});
+  const typeOutput={post:{draft:'',pkg:null},image:{imageData:'',imageUrl:'',pkg:null},reel:{videoUrl:'',pkg:null},short:{videoUrl:'',pkg:null}};
+  const typeSelectors={post:{cls:'9',chapter:'all'},image:{cls:'9',chapter:'all'},reel:{cls:'9',chapter:'all'},short:{cls:'9',chapter:'all'}};
+  function saveActiveTypeState(){questionsByType[currentType]=currentQuestion;write('gsContentQuestionsByType',questionsByType);const out=typeOutput[currentType];if(!out)return;if(currentType==='post'){out.draft=generatedDraft;out.pkg=generatedPackage}else if(currentType==='image'){out.imageData=generatedImageData;out.imageUrl=generatedImageUrl;out.pkg=generatedPackage}else{out.videoUrl=videoUrl;out.pkg=generatedPackage}}
+  function restoreTypeState(type){currentQuestion=questionsByType[type]||null;const out=typeOutput[type]||{};generatedDraft=out.draft||'';generatedImageData=out.imageData||'';generatedImageUrl=out.imageUrl||'';videoUrl=out.videoUrl||'';generatedPackage=out.pkg||null;const sel=typeSelectors[type]||{cls:'9',chapter:'all'};if($('ccClass'))$('ccClass').value=sel.cls;if($('ccChapter'))$('ccChapter').value=sel.chapter;renderQuestion(currentQuestion);if($('imagePreview'))$('imagePreview').src=generatedImageData||'';if($('imageStatus'))$('imageStatus').textContent=generatedImageData?'IMAGE READY • इस Image Post का अलग Question':'पहले इस Image Post के लिए Question generate करें।';if($('postOutput')&&type==='post')$('postOutput').value=generatedDraft;updatePublishAvailability();}
+  function switchContentType(nextType){if(nextType===currentType)return;saveActiveTypeState();currentType=nextType;restoreTypeState(currentType);updateState();}
   function msg(t,kind='info'){const e=$('ccNotice');if(e){e.textContent=t;e.className='notice '+kind;e.hidden=false;setTimeout(()=>e.hidden=true,5000)}}
   async function session(){const {data,error}=await sb.auth.getSession();if(error)throw error;if(!data?.session?.access_token)throw new Error('Admin session उपलब्ध नहीं है। कृपया Admin Panel में login करें।');return data.session.access_token}
   function qCaption(q){return ['📘 GANIT SETU',`कक्षा ${q.class_level} | अध्याय ${q.chapter_number} — ${q.chapter_name||''}`,'','🧮 आज का गणित प्रश्न:',q.question_text,'',`A) ${q.option_a}`,`B) ${q.option_b}`,`C) ${q.option_c}`,`D) ${q.option_d}`,'','🤔 आपका उत्तर क्या है? Comment करके बताइए!','','#GanitSetu #MPBoard #Mathematics #MathsQuestion #Class'+q.class_level].join('\n')}
@@ -290,7 +296,7 @@ Ganit Setu — MP Board Mathematics Learning`,
   // IMAGE MODE: fixed blank template + programmatic text only.
   // No AI image generation is used here. Put the approved blank template at:
   // assets/images/content-post-template.png
-  const IMAGE_TEMPLATE_URL='assets/images/content-post-template.png';
+  const IMAGE_TEMPLATE_URL=new URL('assets/images/content-post-template.png',document.baseURI).href;
   const IMAGE_TEMPLATE_CONFIG={
     width:1024,height:1536,
     // Coordinates tuned for the approved 2:3 portrait master template.
@@ -467,9 +473,10 @@ Ganit Setu — MP Board Mathematics Learning`,
   }
   function renderQuestion(q){
     currentQuestion=q||null;
+    if(typeof questionsByType!=='undefined'){questionsByType[currentType]=currentQuestion;write('gsContentQuestionsByType',questionsByType)}
     const box=$('currentQuestion');
     if(!box)return;
-    if(!q){box.innerHTML='<div class="empty">कोई प्रश्न नहीं मिला। Class/Chapter बदलकर फिर कोशिश करें।</div>';return}
+    if(!q){box.innerHTML=`<div class="empty">${currentType==='image'?'Image Post के लिए अभी अलग Question नहीं चुना गया है। ऊपर Class/Chapter चुनकर Generate New Question दबाएँ।':currentType==='post'?'Text Post के लिए अभी Question नहीं चुना गया है। ऊपर से Question Generate करें।':'इस Content Type के लिए अभी अलग Question नहीं चुना गया है। ऊपर से Question Generate करें।'}</div>`;if($('workspaceQuestion'))$('workspaceQuestion').textContent='—';updatePublishAvailability();return}
     box.innerHTML=`<div class="question-card"><b>Q${esc(q.id)} · Class ${esc(q.class_level)} · Chapter ${esc(q.chapter_number)} — ${esc(q.chapter_name||'')}</b><p>${esc(q.question_text||'')}</p><div>A) ${esc(q.option_a||'')}<br>B) ${esc(q.option_b||'')}<br>C) ${esc(q.option_c||'')}<br>D) ${esc(q.option_d||'')}</div><small>सही उत्तर और व्याख्या प्रकाशित करने से पहले जाँचें।</small></div>`;
     write('gsCurrentContentQuestion',q);
     if($('workspaceQuestion'))$('workspaceQuestion').textContent=`Q${q.id} · Class ${q.class_level} · Chapter ${q.chapter_number}`;
@@ -487,6 +494,7 @@ Ganit Setu — MP Board Mathematics Learning`,
     }catch(e){msg('Chapter list लोड नहीं हुई: '+(e.message||e),'error')}
   }
   async function generateQuestion(){
+    typeSelectors[currentType]={cls:$('ccClass')?.value||'9',chapter:$('ccChapter')?.value||'all'};
     const btn=$('generateQuestion'); if(btn){btn.disabled=true;btn.textContent='⏳ प्रश्न खोज रहे हैं...'}
     try{
       const cls=Number($('ccClass')?.value||9),chapter=$('ccChapter')?.value||'all';
@@ -504,23 +512,29 @@ Ganit Setu — MP Board Mathematics Learning`,
     finally{if(btn){btn.disabled=false;btn.textContent='✨ Generate New Question'}const next=$('newQuestion');if(next)next.disabled=false}
   }
   function updateState(){
+    if($('postStudio'))$('postStudio').hidden=currentType!=='post';
+    if($('imageStudio'))$('imageStudio').hidden=currentType!=='image';
+    if($('videoStudio'))$('videoStudio').hidden=!(currentType==='reel'||currentType==='short');
+    if($('youtubeMeta'))$('youtubeMeta').hidden=!(currentType==='reel'||currentType==='short');
     document.querySelectorAll('[data-type]').forEach(el=>el.classList.toggle('active',el.dataset.type===currentType));
     document.querySelectorAll('.legacy-type-state [data-type]').forEach(el=>el.classList.toggle('active',el.dataset.type===currentType));
     document.querySelectorAll('.content-type-picker [data-type]').forEach(el=>el.classList.toggle('active',el.dataset.type===currentType));
     renderPlatformChoices();
     if($('currentType'))$('currentType').textContent=currentType;
+    if($('questionPanelTitle'))$('questionPanelTitle').textContent='Question Select / Generate — '+({post:'Text Post',image:'Image Post',reel:'Reel / Video',short:'Short / Story'}[currentType]||currentType);
+    if($('questionPanelHint'))$('questionPanelHint').textContent=({post:'यह Question केवल Text Post के लिए है। Image/Reel में अलग Question चुनें।',image:'यहाँ Generate किया गया Question केवल Image Post में रहेगा; Text Post/Reel से अलग।',reel:'यह Question केवल Reel / Video के लिए है; Text Post/Image से अलग।',short:'यह Question केवल Short / Story के लिए है; अन्य Content Type से अलग।'}[currentType]||'हर Content Type का Question अलग है।');
     updatePublishAvailability();
   }
   function bind(){
     initMasterPromptUI();
     $('postType')?.addEventListener('change',()=>{const mt=$('masterPromptType');if(mt){mt.value=$('postType').value;mt.dispatchEvent(new Event('change'))}});
-    $('generateQuestion').onclick=generateQuestion;$('newQuestion').onclick=generateQuestion;$('ccClass').onchange=loadChapters;
+    $('generateQuestion').onclick=generateQuestion;$('newQuestion').onclick=generateQuestion;$('ccClass').onchange=()=>{typeSelectors[currentType]={cls:$('ccClass').value,chapter:'all'};loadChapters()};$('ccChapter').onchange=()=>{typeSelectors[currentType]={cls:$('ccClass').value,chapter:$('ccChapter').value}};
     document.querySelectorAll('[data-platform]').forEach(b=>b.onclick=e=>{if(e.target.closest('.platform-connect'))return;msg('Platform चुनने की जरूरत नहीं है—कंटेंट चारों प्लेटफॉर्म के लिए एक साथ तैयार होगा।','info')});
-    document.querySelectorAll('[data-type]').forEach(b=>b.onclick=()=>{currentType=b.dataset.type;updateState()});
+    document.querySelectorAll('[data-type]').forEach(b=>b.onclick=()=>switchContentType(b.dataset.type));
     document.querySelectorAll('.platform-connect').forEach(b=>b.onclick=e=>{e.stopPropagation();connectPlatform(b.dataset.connect)});
     $('generatePost').onclick=generatePost;$('generateImage').onclick=generateImage;$('createVideo').onclick=videoModal;$('savePackage').onclick=savePackage;
     $('previewPackage').onclick=()=>{const p=readPackageFields();$('previewQuestion').textContent=currentQuestion?`Q${currentQuestion.id}`:'—';$('previewText').textContent=JSON.stringify(p,null,2);$('previewImage').src=generatedImageData||generatedImageUrl||'';$('previewModal').hidden=false};$('closePreview').onclick=()=>$('previewModal').hidden=true;$('closeVideo').onclick=()=>{$('videoModal').hidden=true;$('videoFrame').src=''};
     window.addEventListener('message',e=>{if(e.data?.type==='GS_VIDEO_READY'&&currentQuestion&&String(e.data.question_id)===String(currentQuestion.id)){videoUrl=e.data.video_url||'';$('videoStatus').textContent='✅ Final Video Ready';$('videoLink').href=videoUrl;$('videoLink').hidden=!videoUrl;msg('Final video तैयार है। अब Save करके platform publish कर सकते हैं।','success')}})
   }
-  document.addEventListener('DOMContentLoaded',async()=>{bind();await refreshConnectionStatuses();await loadChapters();const old=read('gsCurrentContentQuestion',null);if(old){currentQuestion=old;renderQuestion(old)}updateState()});
+  document.addEventListener('DOMContentLoaded',async()=>{bind();await refreshConnectionStatuses();await loadChapters();const legacy=read('gsCurrentContentQuestion',null);if(!questionsByType.post&&legacy)questionsByType.post=legacy;restoreTypeState('post');updateState();const master=$('masterTemplatePreview');if(master){master.onload=()=>{const st=$('imageStatus');if(st&&!generatedImageData)st.textContent=`Master template loaded (${master.naturalWidth}×${master.naturalHeight}). Image Post का अलग Question चुनें।`;};master.onerror=()=>{const st=$('imageStatus');if(st)st.textContent='Master template नहीं मिली। assets/images/content-post-template.png को GitHub में सही path पर commit करें।';};if(master.complete&&master.naturalWidth){const st=$('imageStatus');if(st&&!generatedImageData)st.textContent=`Master template loaded (${master.naturalWidth}×${master.naturalHeight}). Image Post का अलग Question चुनें।`;}}});
 })();
