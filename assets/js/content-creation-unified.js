@@ -297,59 +297,91 @@ Ganit Setu — MP Board Mathematics Learning`,
   // No AI image generation is used here. Put the approved blank template at:
   // assets/images/content-post-template.png
   const IMAGE_TEMPLATE_URL=new URL('assets/images/content-post-template.png',document.baseURI).href;
-  const IMAGE_TEMPLATE_CONFIG={
-    width:1024,height:1536,
-    // Coordinates tuned for the approved 2:3 portrait master template.
-    headerX:90, headerY:330, headerWidth:844,
-    questionX:100, questionY:455, questionWidth:824,
-    optionX:115, optionStartY:850, optionGap:82,
-    footerX:512, footerY:1400
-  };
+  const IMAGE_TEMPLATE_CONFIG={width:941,height:1672};
 
-  function drawWrappedText(ctx,text,x,y,maxWidth,lineHeight){
-    const words=String(text||'').split(/\s+/); let line='';
-    for(const word of words){
-      const test=line?line+' '+word:word;
-      if(ctx.measureText(test).width>maxWidth && line){ctx.fillText(line,x,y);y+=lineHeight;line=word}else line=test;
-    }
-    if(line){ctx.fillText(line,x,y);y+=lineHeight;}
-    return y;
+  function fitLines(ctx,text,maxWidth,maxLines,fontSize,minFontSize=20){
+    let size=fontSize, lines=[];
+    const split=()=>{
+      const out=[];
+      for(const para of String(text||'').split(/\n/)){
+        let line='';
+        for(const word of para.trim().split(/\s+/)){
+          const test=line?line+' '+word:word;
+          if(ctx.measureText(test).width<=maxWidth||!line) line=test;
+          else {out.push(line);line=word;}
+        }
+        if(line)out.push(line);
+      }
+      return out;
+    };
+    while(size>minFontSize){ctx.font=`700 ${size}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;lines=split();if(lines.length<=maxLines)break;size-=2;}
+    ctx.font=`700 ${size}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
+    lines=split();
+    if(lines.length>maxLines){lines=lines.slice(0,maxLines);let last=lines[maxLines-1];while(last.length&&ctx.measureText(last+'…').width>maxWidth)last=last.slice(0,-1);lines[maxLines-1]=last+'…';}
+    return {lines,size};
   }
 
   async function generateImage(){
-    if(!currentQuestion)return msg('पहले Question generate करें।','error');
-    const btn=$('generateImage');btn.disabled=true;btn.textContent='⏳ Template में Question लगाया जा रहा है...';
+    if(!currentQuestion)return msg('पहले Image Post के लिए Question generate करें।','error');
+    const btn=$('generateImage');btn.disabled=true;btn.textContent='⏳ सुंदर Question Image बनाई जा रही है...';
     try{
       const template=await loadImg(IMAGE_TEMPLATE_URL);
       const W=template.naturalWidth||IMAGE_TEMPLATE_CONFIG.width;
       const H=template.naturalHeight||IMAGE_TEMPLATE_CONFIG.height;
+      const sx=W/941, sy=H/1672;
       const c=document.createElement('canvas');c.width=W;c.height=H;const ctx=c.getContext('2d');
       ctx.drawImage(template,0,0,W,H);
-      ctx.textBaseline='top';ctx.fillStyle='#172033';ctx.textAlign='left';
+      const X=n=>n*sx, Y=n=>n*sy, S=n=>n*Math.min(sx,sy);
+      // All question content stays inside the blank whiteboard; the template art remains untouched.
+      // Class/chapter pill
+      ctx.save();
+      ctx.shadowColor='rgba(13,48,91,.14)';ctx.shadowBlur=S(8);ctx.shadowOffsetY=Y(3);
+      roundedRect(ctx,X(100),Y(172),X(740),Y(54),S(18));
+      ctx.fillStyle='#123b70';ctx.fill();ctx.restore();
+      ctx.fillStyle='#ffffff';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.font=`700 ${S(22)}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
+      const chapterLine=`कक्षा ${currentQuestion.class_level}   •   अध्याय ${currentQuestion.chapter_number} — ${currentQuestion.chapter_name||''}`;
+      ctx.fillText(chapterLine,X(470),Y(199),X(700));
 
-      const cfg=IMAGE_TEMPLATE_CONFIG;
-      // The blank template owns all branding/background/decorative elements.
-      // JavaScript adds only the database question data.
-      ctx.font='700 30px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif';
-      drawWrappedText(ctx,`कक्षा ${currentQuestion.class_level}  |  अध्याय ${currentQuestion.chapter_number} — ${currentQuestion.chapter_name||''}`,cfg.headerX,cfg.headerY,cfg.headerWidth,42);
+      // Question card with an accent stripe and restrained blue/gold styling
+      const qx=100,qy=250,qw=740,qh=235;
+      ctx.save();ctx.shadowColor='rgba(15,44,80,.12)';ctx.shadowBlur=S(12);ctx.shadowOffsetY=Y(4);
+      roundedRect(ctx,X(qx),Y(qy),X(qw),Y(qh),S(20));ctx.fillStyle='rgba(255,255,255,.94)';ctx.fill();ctx.restore();
+      roundedRect(ctx,X(qx),Y(qy),X(9),Y(qh),S(4));ctx.fillStyle='#f0a329';ctx.fill();
+      ctx.textAlign='left';ctx.textBaseline='top';ctx.fillStyle='#c47b10';
+      ctx.font=`800 ${S(22)}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
+      ctx.fillText('आज का गणित प्रश्न',X(qx+28),Y(qy+20));
+      const question=fitLines(ctx,currentQuestion.question_text,X(qw-56),4,S(34),S(25));
+      ctx.font=`800 ${question.size}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
+      ctx.fillStyle='#142b48';
+      question.lines.forEach((line,i)=>ctx.fillText(line,X(qx+28),Y(qy+61+i*(question.size+S(8)))));
 
-      ctx.font='800 40px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif';
-      let y=cfg.questionY;
-      y=drawWrappedText(ctx,currentQuestion.question_text,cfg.questionX,y,cfg.questionWidth,58);
-      y+=25;
-      ctx.font='700 32px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif';
-      const options=[`A) ${currentQuestion.option_a}`,`B) ${currentQuestion.option_b}`,`C) ${currentQuestion.option_c}`,`D) ${currentQuestion.option_d}`];
-      let oy=cfg.optionStartY;
-      for(const opt of options){oy=drawWrappedText(ctx,opt,cfg.optionX,oy,cfg.questionWidth,46);oy+=cfg.optionGap-46;}
-      ctx.textAlign='center';ctx.font='700 28px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif';
-      ctx.fillText('🤔 आपका उत्तर क्या है? Comment करके बताइए!',cfg.footerX,cfg.footerY);
-
+      // Four answer options in a clear two-column grid.
+      const options=[
+        {label:'A',text:currentQuestion.option_a,x:100,y:515},
+        {label:'B',text:currentQuestion.option_b,x:485,y:515},
+        {label:'C',text:currentQuestion.option_c,x:100,y:635},
+        {label:'D',text:currentQuestion.option_d,x:485,y:635}
+      ];
+      for(const o of options){
+        const ox=o.x,oy=o.y,ow=355,oh=100;
+        ctx.save();ctx.shadowColor='rgba(13,48,91,.10)';ctx.shadowBlur=S(7);ctx.shadowOffsetY=Y(3);
+        roundedRect(ctx,X(ox),Y(oy),X(ow),Y(oh),S(17));ctx.fillStyle='#ffffff';ctx.fill();ctx.restore();
+        roundedRect(ctx,X(ox+13),Y(oy+19),X(43),Y(43),S(13));ctx.fillStyle='#eaf2ff';ctx.fill();
+        ctx.fillStyle='#123b70';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`800 ${S(22)}px Arial,sans-serif`;ctx.fillText(o.label,X(ox+34),Y(oy+40));
+        const val=fitLines(ctx,String(o.text||''),X(ow-78),2,S(25),S(18));
+        ctx.textAlign='left';ctx.textBaseline='top';ctx.font=`700 ${val.size}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;ctx.fillStyle='#172b45';
+        const totalH=val.lines.length*(val.size+S(4));let ty=oy+(oh-totalH/Math.min(sx,sy))/2;
+        val.lines.forEach((line,i)=>ctx.fillText(line,X(ox+68),Y(ty)+i*(val.size+S(4))));
+      }
+      // Small engagement prompt in the remaining clear board area, above the teacher's hand.
+      ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#123b70';ctx.font=`700 ${S(21)}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
+      ctx.fillText('🤔 आपका उत्तर क्या है? कमेंट करें!',X(470),Y(785),X(700));
       generatedImageData=c.toDataURL('image/png');
-      $('imagePreview').src=generatedImageData;$('imagePreviewWrap').hidden=false;$('imageStatus').textContent='FIXED TEMPLATE • QUESTION INSERTED';
-      updatePublishAvailability();renderPlatformPreviews();msg('Master template पर Question सफलतापूर्वक लगाया गया।','success');
-    }catch(e){
-      msg(`Blank template नहीं मिला। ${IMAGE_TEMPLATE_URL} पर आपका approved template रखें।`,'error');
-    }finally{btn.disabled=false;btn.textContent='🖼️ Template में Question डालें'}
+      $('imagePreview').src=generatedImageData;$('imagePreviewWrap').hidden=false;$('imageStatus').textContent='FIXED TEMPLATE • DESIGNED QUESTION INSERTED';
+      updatePublishAvailability();renderPlatformPreviews();msg('Question को खाली बोर्ड में डिज़ाइन के साथ फिट कर दिया गया।','success');
+    }catch(e){console.error('[Ganit Setu] Image layout error',e);msg(`Question Image नहीं बन पाई: ${e.message||'कृपया template और question data जाँचें।'}`,'error');}
+    finally{btn.disabled=false;btn.textContent='🖼️ Template में Question डालें'}
   }
 
   function dataUrlToFile(dataUrl,name='ganit-setu-question.jpg'){const [meta,b64]=dataUrl.split(',');const bin=atob(b64);const arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);return new File([arr],name,{type:(meta.match(/data:(.*?);/)||[])[1]||'image/jpeg'})}
