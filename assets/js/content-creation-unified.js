@@ -276,6 +276,213 @@ Ganit Setu — MP Board Mathematics Learning`,
       explanation:$('pkgExplanation')?.value.trim()||base.explanation||''
     };
   }
+function parseImagePackageSafely(text){
+  let s = String(text || '').trim();
+  const fenced = s.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fenced) s = fenced[1].trim();
+
+  const first = s.indexOf('{');
+  const last = s.lastIndexOf('}');
+  if (first < 0 || last <= first) return null;
+  s = s.slice(first, last + 1);
+
+  // Gemini JSON strings में आए असली newline/tab को सुरक्षित करें।
+  let fixed = '';
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+
+    if (inString) {
+      if (escaped) {
+        fixed += c;
+        escaped = false;
+      } else if (c === '\\') {
+        fixed += c;
+        escaped = true;
+      } else if (c === '"') {
+        fixed += c;
+        inString = false;
+      } else if (c === '\n') {
+        fixed += '\\n';
+      } else if (c === '\r') {
+        fixed += '\\r';
+      } else if (c === '\t') {
+        fixed += '\\t';
+      } else {
+        fixed += c;
+      }
+    } else {
+      fixed += c;
+      if (c === '"') inString = true;
+    }
+  }
+
+  try {
+    const o = JSON.parse(fixed);
+    if (!o || typeof o !== 'object' || Array.isArray(o)) return null;
+
+    const pkg = {
+      title: o.title || '',
+      hook: o.hook || '',
+      post: o.post || o.main_post || o.content || '',
+      caption: o.caption || '',
+      description: o.description || '',
+      cta: o.cta || '',
+      hashtags: Array.isArray(o.hashtags)
+        ? o.hashtags.join(' ') : (o.hashtags || ''),
+      keywords: Array.isArray(o.keywords)
+        ? o.keywords.join(', ') : (o.keywords || o.tags || ''),
+      answer_comment: o.answer_comment || o.answerComment || '',
+      hint: o.hint || currentQuestion?.hint || '',
+      explanation: o.explanation || currentQuestion?.explanation || '',
+      platform_packages: o.platform_packages &&
+        typeof o.platform_packages === 'object'
+        ? o.platform_packages : {}
+    };
+
+    // किसी प्लेटफॉर्म का अलग पैकेज न मिले तो मुख्य कंटेंट से
+    // उसका preview तैयार करें; Text Post का कोड नहीं बदलता।
+    const platforms = ['facebook', 'instagram', 'youtube', 'whatsapp'];
+    platforms.forEach(platform => {
+      if (!pkg.platform_packages[platform] ||
+          typeof pkg.platform_packages[platform] !== 'object') {
+        pkg.platform_packages[platform] = {
+          title: pkg.title,
+          hook: pkg.hook,
+          post: pkg.post,
+          caption: pkg.caption || pkg.post,
+          description: pkg.description,
+          cta: pkg.cta,
+          hashtags: pkg.hashtags,
+          keywords: pkg.keywords,
+          answer_comment: pkg.answer_comment
+        };
+      }
+    });
+
+    return pkg;
+  } catch (e) {
+    console.error('[Ganit Setu] Image JSON parse error:', e);
+    return null;
+  }
+}
+
+async function generateImageContentPackage(){
+  const btn = $('generateImageContent');
+  if (!btn) return;
+
+  if (!currentQuestion) {
+    msg('पहले Image Post के लिए Question Generate करें।', 'error');
+    return;
+  }
+
+  btn.disabled = true;
+  const oldLabel = btn.textContent;
+  btn.textContent = '⏳ Image Content Package बन रहा है...';
+
+  try {
+    const token = await session();
+    const selectedType = $('postType')?.value || 'question';
+    const language = $('postLanguage')?.value || 'hi';
+    const topic = packagePrompt();
+    const master = selectedMasterPrompt();
+
+    if (!master || !master.trim()) {
+      throw new Error('Master Prompt खाली है। पहले Master Prompt सेव करें।');
+    }
+
+    const payload = {
+      type: selectedType,
+      classLevel: String(
+        currentQuestion.class_level || $('ccClass')?.value || 9
+      ),
+      language,
+      topic,
+      prompt: topic,
+      masterPrompt: master,
+      question: currentQuestion,
+      platforms: ['facebook', 'instagram', 'youtube', 'whatsapp']
+    };
+
+    const response = await fetch(AI_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'apikey': ANON
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const raw = await response.text();
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      data = { error: raw };
+    }
+
+    if (!response.ok) {
+      const detail = typeof data.error === 'string'
+        ? data.error
+        : (data.error?.message || data.message || raw);
+      throw new Error(`Gemini request failed (${response.status}): ${detail}`);
+    }
+
+    let responseText =
+      data.text ??
+      data.content ??
+      data.result?.text ??
+      data.data?.text ??
+      data.output_text ??
+      '';
+
+    // कुछ responses में content सीधे object हो सकता है।
+    if (responseText && typeof responseText === 'object') {
+      responseText = JSON.stringify(responseText);
+    }
+
+    if (!responseText) {
+      throw new Error(
+        'Gemini response में text/content नहीं मिला: ' +
+        JSON.stringify(data).slice(0, 500)
+      );
+    }
+
+    const pkg = parseImagePackageSafely(responseText);
+
+    if (!pkg) {
+      throw new Error(
+        'Image Content का JSON ठीक से पढ़ा नहीं जा सका। उत्तर का शुरुआती भाग: ' +
+        String(responseText).slice(0, 450)
+      );
+    }
+
+    renderPackageFields(pkg);
+
+    if ($('postStatus')) {
+      $('postStatus').textContent =
+        'GEMINI • IMAGE CONTENT PREVIEWS READY';
+    }
+    if ($('saveDraft')) $('saveDraft').disabled = false;
+
+    renderPlatformPreviews();
+    msg(
+      'Image Content Package तैयार है। Preview जाँचकर Save All करें।',
+      'success'
+    );
+  } catch (e) {
+    if ($('postStatus')) $('postStatus').textContent = 'ERROR';
+    msg(e.message || 'Image Content Generate नहीं हो पाया।', 'error');
+    console.error('[Ganit Setu] Image package generation failed:', e);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = oldLabel || '✨ पूरा Content Package Generate करें';
+  }
+}
+
   async function generatePost(){
     const selectedType=$('postType')?.value||'question';
     if(!currentQuestion&&(selectedType==='question'||selectedType==='trick'))return msg('इस Post Type के लिए पहले नया Question generate करें।','error');
@@ -622,7 +829,13 @@ Ganit Setu — MP Board Mathematics Learning`,
     document.querySelectorAll('[data-platform]').forEach(b=>b.onclick=e=>{if(e.target.closest('.platform-connect'))return;msg('Platform चुनने की जरूरत नहीं है—कंटेंट चारों प्लेटफॉर्म के लिए एक साथ तैयार होगा।','info')});
     document.querySelectorAll('[data-type]').forEach(b=>b.onclick=()=>switchContentType(b.dataset.type));
     document.querySelectorAll('.platform-connect').forEach(b=>b.onclick=e=>{e.stopPropagation();connectPlatform(b.dataset.connect)});
-    $('generatePost').onclick=generatePost;if($('generateImageContent'))$('generateImageContent').onclick=generatePost;$('generateImage').onclick=generateImage;$('createVideo').onclick=videoModal;$('savePackage').onclick=savePackage;
+    
+$('generatePost').onclick=generatePost;
+if($('generateImageContent')){
+  $('generateImageContent').onclick=generateImageContentPackage;
+}
+$('generateImage').onclick=generateImage;
+$('createVideo').onclick=videoModal;$('savePackage').onclick=savePackage;
     $('previewPackage').onclick=()=>{const p=readPackageFields();$('previewQuestion').textContent=currentQuestion?`Q${currentQuestion.id}`:'—';$('previewText').textContent=JSON.stringify(p,null,2);$('previewImage').src=generatedImageData||generatedImageUrl||'';$('previewModal').hidden=false};$('closePreview').onclick=()=>$('previewModal').hidden=true;$('closeVideo').onclick=()=>{$('videoModal').hidden=true;$('videoFrame').src=''};
     window.addEventListener('message',e=>{if(e.data?.type==='GS_VIDEO_READY'&&currentQuestion&&String(e.data.question_id)===String(currentQuestion.id)){videoUrl=e.data.video_url||'';$('videoStatus').textContent='✅ Final Video Ready';$('videoLink').href=videoUrl;$('videoLink').hidden=!videoUrl;msg('Final video तैयार है। अब Save करके platform publish कर सकते हैं।','success')}})
   }
