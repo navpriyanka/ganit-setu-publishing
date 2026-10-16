@@ -324,22 +324,36 @@ function parseImagePackageSafely(text){
     if (!o || typeof o !== 'object' || Array.isArray(o)) return null;
 
     const pkg = {
-      title: o.title || '',
-      hook: o.hook || '',
-      post: o.post || o.main_post || o.content || '',
-      caption: o.caption || '',
-      description: o.description || '',
-      cta: o.cta || '',
-      hashtags: Array.isArray(o.hashtags)
-        ? o.hashtags.join(' ') : (o.hashtags || ''),
-      keywords: Array.isArray(o.keywords)
-        ? o.keywords.join(', ') : (o.keywords || o.tags || ''),
-      answer_comment: o.answer_comment || o.answerComment || '',
-      hint: o.hint || currentQuestion?.hint || '',
-      explanation: o.explanation || currentQuestion?.explanation || '',
-      platform_packages: o.platform_packages &&
-        typeof o.platform_packages === 'object'
-        ? o.platform_packages : {}
+      
+const platformData = o.platform_packages || {};
+const fb = platformData.facebook || {};
+const ig = platformData.instagram || {};
+const yt = platformData.youtube || {};
+const wa = platformData.whatsapp || {};
+const fallback = [fb, ig, wa, yt].find(
+  p => p && (p.post || p.caption || p.description)
+) || {};
+
+const pkg = {
+  title: o.title || fb.title || ig.title || yt.title || wa.title || '',
+  hook: o.hook || fallback.hook || '',
+  post: o.post || o.main_post || o.content || fallback.post || '',
+  caption: o.caption || fallback.caption || fallback.post || '',
+  description: o.description || yt.description || fallback.description || '',
+  cta: o.cta || fallback.cta || '',
+  hashtags: Array.isArray(o.hashtags)
+    ? o.hashtags.join(' ')
+    : (o.hashtags || fallback.hashtags || ''),
+  keywords: Array.isArray(o.keywords)
+    ? o.keywords.join(', ')
+    : (o.keywords || o.tags || yt.keywords || fallback.keywords || ''),
+  answer_comment: o.answer_comment || o.answerComment ||
+    fallback.answer_comment || '',
+  hint: o.hint || currentQuestion?.hint || '',
+  explanation: o.explanation || currentQuestion?.explanation || '',
+  platform_packages: platformData
+};
+ {}
     };
 
     // किसी प्लेटफॉर्म का अलग पैकेज न मिले तो मुख्य कंटेंट से
