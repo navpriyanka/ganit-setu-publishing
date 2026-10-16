@@ -21,8 +21,13 @@
   function msg(t,kind='info'){const e=$('ccNotice');if(e){e.textContent=t;e.className='notice '+kind;e.hidden=false;setTimeout(()=>e.hidden=true,5000)}}
   async function session(){const {data,error}=await sb.auth.getSession();if(error)throw error;if(!data?.session?.access_token)throw new Error('Admin session उपलब्ध नहीं है। कृपया Admin Panel में login करें।');return data.session.access_token}
   function qCaption(q){return ['📘 GANIT SETU',`कक्षा ${q.class_level} | अध्याय ${q.chapter_number} — ${q.chapter_name||''}`,'','🧮 आज का गणित प्रश्न:',q.question_text,'',`A) ${q.option_a}`,`B) ${q.option_b}`,`C) ${q.option_c}`,`D) ${q.option_d}`,'','🤔 आपका उत्तर क्या है? Comment करके बताइए!','','#GanitSetu #MPBoard #Mathematics #MathsQuestion #Class'+q.class_level].join('\n')}
-  // Facebook sends hashtags in a separate field; remove hashtag tokens from caption to prevent duplicates.
-  function captionWithoutHashtags(value){return String(value||'').replace(/(^|\s)#[\p{L}\p{N}_]+/gu,' ').replace(/[ \t]+/g,' ').split('\n').map(line=>line.trim()).filter(Boolean).join('\n').trim()}
+  // Keep hashtags as a properly spaced caption line; do not send a second hashtag field.
+  function captionWithHashtags(value, tags){
+    const body=String(value||'').replace(/(^|\s)#[\p{L}\p{N}_]+/gu,' ').replace(/[ \t]+/g,' ').split('\n').map(line=>line.trim()).filter(Boolean).join('\n').trim();
+    const raw=Array.isArray(tags)?tags.join(' '):String(tags||'');
+    const normalized=[...raw.matchAll(/[\p{L}\p{N}_]+/gu)].map(m=>'#'+m[0]).filter((tag,i,all)=>all.indexOf(tag)===i);
+    return [body,normalized.join(' ')].filter(Boolean).join('\n\n');
+  }
   function qMeta(q,pkg=null){
     const p=pkg||{};
     return {title:p.title||`आज का गणित प्रश्न | कक्षा ${q.class_level} | अध्याय ${q.chapter_number}`,
@@ -464,7 +469,7 @@ Ganit Setu — MP Board Mathematics Learning`,
     const content=pkg.content||{post:pkg.draft||''};
     const meta=qMeta(question,content); const token=await session();
     if(pkg.platform==='facebook'){
-      const payload={action:'publish',question_id:Number(pkg.question_id),plan_id:null,class_level:Number(question.class_level),platform:'facebook',content_type:pkg.content_type,media_url:pkg.media_url||null,title:meta.title,caption:captionWithoutHashtags(meta.caption||meta.post),description:meta.description,hashtags:meta.hashtags,answer_comment:meta.answerComment,publish_mode:'now'};
+      const payload={action:'publish',question_id:Number(pkg.question_id),plan_id:null,class_level:Number(question.class_level),platform:'facebook',content_type:pkg.content_type,media_url:pkg.media_url||null,title:meta.title,caption:captionWithHashtags(meta.caption||meta.post,meta.hashtags),description:meta.description,hashtags:'',answer_comment:meta.answerComment,publish_mode:'now'};
       let r;
       try{r=await fetch(FACEBOOK_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`,'apikey':ANON},body:JSON.stringify(payload)});}
       catch(netErr){throw new Error('Facebook Edge Function तक request नहीं पहुँची: '+(netErr.message||netErr));}
