@@ -160,7 +160,7 @@ Ganit Setu — MP Board Mathematics Learning`,
     content.keywords=Array.isArray(content.keywords)?content.keywords.join(', '):(content.keywords||'');
     let mediaUrl=generatedImageUrl;
     if(generatedImageData&&!mediaUrl){const up=await uploadFile(dataUrlToFile(generatedImageData,`Q${currentQuestion.id}_GANIT_SETU.jpg`),'images',currentQuestion.id);mediaUrl=generatedImageUrl=up.url;}
-    return {id:crypto.randomUUID(),question_id:Number(currentQuestion.id),class_level:Number(currentQuestion.class_level),chapter_number:Number(currentQuestion.chapter_number),chapter_name:currentQuestion.chapter_name||'',platform,content_type:currentType,content,draft:content.post||content.caption||'',media_url:mediaUrl||'',video_url:videoUrl||'',created_at:new Date().toISOString(),status:'saved'};
+    return {id:crypto.randomUUID(),question_id:(platform==='facebook'&&currentType==='post'?currentQuestion.id:Number(currentQuestion.id)),class_level:Number(currentQuestion.class_level),chapter_number:Number(currentQuestion.chapter_number),chapter_name:currentQuestion.chapter_name||'',platform,content_type:currentType,content,draft:content.post||content.caption||'',media_url:mediaUrl||'',video_url:videoUrl||'',created_at:new Date().toISOString(),status:'saved'};
   }
   async function publishOnePlatform(platform){
     const btn=document.querySelector(`[data-publish-platform="${platform}"]`);
@@ -445,9 +445,20 @@ Ganit Setu — MP Board Mathematics Learning`,
     }catch(e){msg(e.message,'error')}
   }
   async function publishPackage(pkg){
-    const q=currentQuestion&&Number(currentQuestion.id)===Number(pkg.question_id)?currentQuestion:null;
-    const question=q||(await sb.from('questions').select('id,class_level,chapter_number,chapter_name,question_text,option_a,option_b,option_c,option_d,correct_option,hint,explanation').eq('id',Number(pkg.question_id)).maybeSingle()).data;
-    if(!question)throw new Error('Question data नहीं मिला।');
+    const isFacebookTextPost=pkg.platform==='facebook'&&pkg.content_type==='post';
+    // Text-post question IDs may be text IDs such as Q750; never coerce those IDs to Number.
+    const sameId=(a,b)=>String(a??'').trim()===String(b??'').trim();
+    const q=currentQuestion&&sameId(currentQuestion.id,pkg.question_id)?currentQuestion:null;
+    let question=q;
+    if(!question){
+      const questionId=(isFacebookTextPost?String(pkg.question_id??'').trim():pkg.question_id);
+      if(questionId!==''&&questionId!=null){
+        const lookup=await sb.from('questions').select('id,class_level,chapter_number,chapter_name,question_text,option_a,option_b,option_c,option_d,correct_option,hint,explanation').eq('id',questionId).maybeSingle();
+        if(lookup.error)throw new Error('Question lookup failed ('+lookup.error.code+'): '+lookup.error.message);
+        question=lookup.data;
+      }
+    }
+    if(!question)throw new Error('Question data नहीं मिला। Question ID: '+String(pkg.question_id??'खाली')+'. कृपया Text Post में प्रश्न फिर से चुनकर Publish करें।');
     const content=pkg.content||{post:pkg.draft||''};
     const meta=qMeta(question,content); const token=await session();
     if(pkg.platform==='facebook'){
