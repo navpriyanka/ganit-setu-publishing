@@ -160,10 +160,13 @@ Ganit Setu — MP Board Mathematics Learning`,
     content.keywords=Array.isArray(content.keywords)?content.keywords.join(', '):(content.keywords||'');
     let mediaUrl=generatedImageUrl;
     if(generatedImageData&&!mediaUrl){const up=await uploadFile(dataUrlToFile(generatedImageData,`Q${currentQuestion.id}_GANIT_SETU.jpg`),'images',currentQuestion.id);mediaUrl=generatedImageUrl=up.url;}
-    return {id:crypto.randomUUID(),question_id:Number(currentQuestion.id),class_level:Number(currentQuestion.class_level),chapter_number:Number(currentQuestion.chapter_number),chapter_name:currentQuestion.chapter_name||'',platform,content_type:currentType,content,draft:content.post||content.caption||'',media_url:mediaUrl||'',video_url:videoUrl||'',created_at:new Date().toISOString(),status:'saved'};
+    return {id:crypto.randomUUID(),question_id:(platform==='facebook'&&currentType==='post'?currentQuestion.id:Number(currentQuestion.id)),class_level:Number(currentQuestion.class_level),chapter_number:Number(currentQuestion.chapter_number),chapter_name:currentQuestion.chapter_name||'',platform,content_type:currentType,content,draft:content.post||content.caption||'',media_url:mediaUrl||'',video_url:videoUrl||'',created_at:new Date().toISOString(),status:'saved'};
   }
   async function publishOnePlatform(platform){
-    const btn=document.querySelector(`[data-publish-platform="${platform}"]`);if(btn){btn.disabled=true;btn.textContent='Publishing…';}
+    const btn=document.querySelector(`[data-publish-platform="${platform}"]`);
+    const originalLabel=btn?.textContent||'🚀 Publish';
+    if(btn){btn.disabled=true;btn.textContent='⏳ Facebook/Platform पर भेज रहे हैं…';}
+    if(platform==='facebook') msg('Facebook को पोस्ट भेजी जा रही है। कृपया परिणाम आने तक पेज बंद न करें।','info');
     try{
       if(platform==='whatsapp'){
         // Open the user's existing Ganit Setu WhatsApp Channel; publishing remains manual.
@@ -188,11 +191,19 @@ Ganit Setu — MP Board Mathematics Learning`,
         catch(e){msg('YouTube Community खुल गया। Preview से टेक्स्ट कॉपी करें, वहाँ Ctrl+V करें और Post दबाएँ। अभी पोस्ट प्रकाशित नहीं हुआ है।','info');}
         return;
       }
-      const pkg=await makeCurrentPlatformPackage(platform);const result=await publishPackage(pkg);
+      const pkg=await makeCurrentPlatformPackage(platform);
+      const result=await publishPackage(pkg);
       if(result?.manual){msg(result.message||'मैन्युअल शेयर आवश्यक है।','info');return;}
-      msg(PLATFORM_LABELS[platform]+' publish API ने सफलता लौटाई।','success');
-    }catch(e){msg(PLATFORM_LABELS[platform]+' publish नहीं हुआ: '+(e.message||e),'error');}
-    finally{if(btn){btn.disabled=false;btn.textContent='🚀 Publish';}}
+      const postId=result?.external_post_id||result?.post_id||result?.id||'';
+      if(btn){btn.textContent='✅ Publish API Success';}
+      msg(PLATFORM_LABELS[platform]+' की API ने सफलता लौटाई।'+(postId?' Post ID: '+postId:'')+(result?.external_url?' • '+result.external_url:''),'success');
+      if(platform==='facebook') console.info('[Ganit Setu] Facebook publish result', {success:result?.success,ok:result?.ok,external_post_id:postId,external_url:result?.external_url||null});
+    }catch(e){
+      console.error('[Ganit Setu] '+PLATFORM_LABELS[platform]+' publish failed',e);
+      if(btn)btn.textContent='❌ Publish Failed';
+      msg(PLATFORM_LABELS[platform]+' publish नहीं हुआ: '+(e.message||e)+'। अगर संदेश अस्पष्ट हो तो Browser Console और Supabase facebook-oauth logs जाँचें।','error');
+    }
+    finally{if(btn){btn.disabled=false;setTimeout(()=>{if(btn.isConnected)btn.textContent=originalLabel;},4500);}}
   }
   async function publishAllCurrent(){
     if(!currentQuestion)return msg('पहले Question generate करें।','error');
@@ -434,14 +445,31 @@ Ganit Setu — MP Board Mathematics Learning`,
     }catch(e){msg(e.message,'error')}
   }
   async function publishPackage(pkg){
-    const q=currentQuestion&&Number(currentQuestion.id)===Number(pkg.question_id)?currentQuestion:null;
-    const question=q||(await sb.from('questions').select('id,class_level,chapter_number,chapter_name,question_text,option_a,option_b,option_c,option_d,correct_option,hint,explanation').eq('id',Number(pkg.question_id)).maybeSingle()).data;
-    if(!question)throw new Error('Question data नहीं मिला।');
+    const isFacebookTextPost=pkg.platform==='facebook'&&pkg.content_type==='post';
+    // Text-post question IDs may be text IDs such as Q750; never coerce those IDs to Number.
+    const sameId=(a,b)=>String(a??'').trim()===String(b??'').trim();
+    const q=currentQuestion&&sameId(currentQuestion.id,pkg.question_id)?currentQuestion:null;
+    let question=q;
+    if(!question){
+      const questionId=(isFacebookTextPost?String(pkg.question_id??'').trim():pkg.question_id);
+      if(questionId!==''&&questionId!=null){
+        const lookup=await sb.from('questions').select('id,class_level,chapter_number,chapter_name,question_text,option_a,option_b,option_c,option_d,correct_option,hint,explanation').eq('id',questionId).maybeSingle();
+        if(lookup.error)throw new Error('Question lookup failed ('+lookup.error.code+'): '+lookup.error.message);
+        question=lookup.data;
+      }
+    }
+    if(!question)throw new Error('Question data नहीं मिला। Question ID: '+String(pkg.question_id??'खाली')+'. कृपया Text Post में प्रश्न फिर से चुनकर Publish करें।');
     const content=pkg.content||{post:pkg.draft||''};
     const meta=qMeta(question,content); const token=await session();
     if(pkg.platform==='facebook'){
-      const payload={action:'publish',question_id:Number(pkg.question_id),plan_id:null,class_level:Number(question.class_level),platform:'facebook',content_type:pkg.content_type,media_url:pkg.media_url||null,title:meta.title,caption:(meta.caption||meta.post||'').replace(/#[^\s#]+/g,'').replace(/[ \t]{2,}/g,' ').trim(),description:meta.description,hashtags:meta.hashtags,answer_comment:meta.answerComment,publish_mode:'now'};
-      const r=await fetch(FACEBOOK_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`,'apikey':ANON},body:JSON.stringify(payload)});const d=await r.json().catch(()=>({}));if(!r.ok||!d.success)throw new Error(d.error||d.meta_error_message||'Facebook publish failed');return d;
+      const payload={action:'publish',question_id:Number(pkg.question_id),plan_id:null,class_level:Number(question.class_level),platform:'facebook',content_type:pkg.content_type,media_url:pkg.media_url||null,title:meta.title,caption:meta.caption||meta.post,description:meta.description,hashtags:meta.hashtags,answer_comment:meta.answerComment,publish_mode:'now'};
+      let r;
+      try{r=await fetch(FACEBOOK_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`,'apikey':ANON},body:JSON.stringify(payload)});}
+      catch(netErr){throw new Error('Facebook Edge Function तक request नहीं पहुँची: '+(netErr.message||netErr));}
+      const raw=await r.text();let d={};try{d=JSON.parse(raw)}catch{d={raw_response:raw};}
+      const apiSuccess=d.success===true||d.ok===true||d.status==='published';
+      if(!r.ok||!apiSuccess){const detail=typeof d.error==='string'?d.error:(d.error?.message||d.meta_error_message||d.message||d.raw_response||'Facebook publish failed');throw new Error(`Facebook API (${r.status}) ने सफलता की पुष्टि नहीं की: ${detail}`);}
+      return d;
     }
     if(pkg.platform==='instagram'){
       if(pkg.content_type==='post')throw new Error('Instagram पर text-only post publish नहीं होता। Image/Video content बनाएं।');
