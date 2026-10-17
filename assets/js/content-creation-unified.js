@@ -143,10 +143,10 @@ Ganit Setu — MP Board Mathematics Learning`,
       const caption=isQuestionTextPost?qCaption(currentQuestion):isImageQuestion?imageQuestionCaption(currentQuestion,platform,v,base):(v.caption||v.post||base.caption||base.post||'');
       const isYouTubeTextPost=platform==='youtube'&&currentType==='post';
       const note=isYouTubeTextPost?'टेक्स्ट कॉपी होगा और YouTube Community खुलेगा। अंतिम Post बटन वहाँ दबाना होगा।':platform==='whatsapp'?'पूरा पोस्ट कॉपी होगा और मौजूदा Ganit Setu WhatsApp Channel खुलेगा। वहाँ मैन्युअल रूप से शेयर करें।':platform==='instagram'&&currentType==='post'?'Text-only Instagram publish उपलब्ध नहीं।':'';
-      const canPublish=platform==='facebook' || platform==='whatsapp' || (platform==='instagram'&&currentType!=='post'&&!!(generatedImageUrl||generatedImageData||videoUrl)) || (platform==='youtube'&&(isYouTubeTextPost||((currentType==='image'||currentType==='reel'||currentType==='short')&&!!(generatedImageUrl||generatedImageData||videoUrl))));
-      const publishLabel=platform==='whatsapp'?'↗ Copy + Open WhatsApp Channel':(platform==='youtube'&&(isYouTubeTextPost||currentType==='image'))?'↗ Open Community + Copy':canPublish?'🚀 Publish':'Publish unavailable';
-      const pill=((platform==='youtube'&&(isYouTubeTextPost||currentType==='image'))||platform==='whatsapp')?'Copy + Open':canPublish?'Publish available':'Preview only';
-      const imagePreview=currentType==='image'&&generatedImageData?`<img src="${generatedImageData}" alt="${PLATFORM_LABELS[platform]} image preview" style="display:block;width:100%;max-width:320px;max-height:520px;object-fit:contain;margin:10px auto;border-radius:10px">`:'';return `<article class="preview-platform-card" data-preview-platform="${platform}"><div class="preview-card-head"><h3>${PLATFORM_LABELS[platform]}</h3><span class="platform-pill">${pill}</span></div>${note?`<p class="preview-note">${esc(note)}</p>`:''}${imagePreview}<pre>${esc(caption)}</pre><div class="preview-card-actions"><button type="button" class="btn ghost copy-platform" data-copy-platform="${platform}">📋 Copy Preview</button><button type="button" class="btn purple platform-publish" data-publish-platform="${platform}" ${canPublish?'':'disabled'}>${publishLabel}</button></div></article>`;
+      const canPublish=platform==='facebook' || platform==='whatsapp' || (platform==='instagram'&&currentType!=='post'&&!!(generatedImageUrl||generatedImageData||videoUrl)) || (platform==='youtube'&&(isYouTubeTextPost||!!videoUrl&&currentType!=='post'));
+      const publishLabel=platform==='whatsapp'?'↗ Copy + Open WhatsApp Channel':isYouTubeTextPost?'↗ Open Community + Copy':canPublish?'🚀 Publish':'Publish unavailable';
+      const pill=(isYouTubeTextPost||platform==='whatsapp')?'Copy + Open':canPublish?'Publish available':'Preview only';
+      const imagePreview=currentType==='image'&&generatedImageData?`<img src="${generatedImageData}" alt="${PLATFORM_LABELS[platform]} image preview" style="display:block;width:100%;max-width:320px;height:auto;max-height:520px;object-fit:contain;object-position:center;margin:10px auto;border-radius:10px">`:'';return `<article class="preview-platform-card" data-preview-platform="${platform}"><div class="preview-card-head"><h3>${PLATFORM_LABELS[platform]}</h3><span class="platform-pill">${pill}</span></div>${note?`<p class="preview-note">${esc(note)}</p>`:''}${imagePreview}<pre>${esc(caption)}</pre><div class="preview-card-actions"><button type="button" class="btn ghost copy-platform" data-copy-platform="${platform}">📋 Copy Preview</button><button type="button" class="btn purple platform-publish" data-publish-platform="${platform}" ${canPublish?'':'disabled'}>${publishLabel}</button></div></article>`;
     }).join('');
     box.querySelectorAll('[data-copy-platform]').forEach(btn=>btn.addEventListener('click',async()=>{
       const platform=btn.dataset.copyPlatform;
@@ -200,31 +200,23 @@ Ganit Setu — MP Board Mathematics Learning`,
     if(platform==='facebook') msg('Facebook को पोस्ट भेजी जा रही है। कृपया परिणाम आने तक पेज बंद न करें।','info');
     try{
       if(platform==='whatsapp'){
-        // Keep the existing Ganit Setu Channel flow; copy text and download image without changing any content fields.
-        window.open('https://whatsapp.com/channel/0029VbDLOBHICVfrePXZ363D','_blank','noopener');
-        const pkg=await makeCurrentPlatformPackage(platform);
+        // Keep the existing Ganit Setu Channel and start clipboard work synchronously
+        // from the user's click, before any awaited package/storage operations.
         const isQuestionPost=currentType==='post'&&(($('postType')?.value||'question')==='question')&&!!currentQuestion;
-        const postText=(isQuestionPost?qCaption(currentQuestion):[pkg.content.title,pkg.content.hook,pkg.content.caption||pkg.content.post,pkg.content.cta,pkg.content.hashtags].filter(Boolean).join('\n\n')).trim();
-        if(currentType==='image'&&(generatedImageData||generatedImageUrl)){
-          const a=document.createElement('a');a.href=generatedImageData||generatedImageUrl;a.download=`GANIT_SETU_Q${currentQuestion?.id||'image'}.png`;a.target='_blank';document.body.appendChild(a);a.click();a.remove();
-        }
+        const isImagePost=currentType==='image'&&!!currentQuestion;
+        const baseNow=readPackageFields();
+        const vNow=(baseNow.platform_packages||{}).whatsapp||baseNow;
+        const postText=(isQuestionPost?qCaption(currentQuestion):isImagePost?imageQuestionCaption(currentQuestion,'whatsapp',vNow,baseNow):[vNow.title||baseNow.title,vNow.hook||baseNow.hook,vNow.caption||vNow.post||baseNow.caption||baseNow.post,vNow.cta||baseNow.cta,Array.isArray(vNow.hashtags)?vNow.hashtags.join(' '):(vNow.hashtags||baseNow.hashtags)].filter(Boolean).join('\n\n')).trim();
+        let copied=false;
         try{
-          if(navigator.clipboard&&window.isSecureContext)await navigator.clipboard.writeText(postText);
-          else {const ta=document.createElement('textarea');ta.value=postText;ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();ta.setSelectionRange(0,ta.value.length);const ok=document.execCommand('copy');ta.remove();if(!ok)throw new Error('copy failed');}
-          msg('कैप्शन कॉपी हो गया, Ganit Setu WhatsApp Channel खुल गया। इमेज डाउनलोड हुई/शुरू हुई; वहाँ इमेज जोड़कर Ctrl+V करें और मैन्युअल शेयर करें।','info');
-        }catch(e){msg('WhatsApp Channel खुल गया। कैप्शन Preview से कॉपी करें और डाउनलोड हुई इमेज जोड़कर मैन्युअल शेयर करें।','error');}
-        return;
-      }
-      if(platform==='youtube'&&(currentType==='post'||currentType==='image')){
-        // YouTube Community has no supported direct publish endpoint here; open it and prepare text/image for manual posting.
-        window.open('https://www.youtube.com/@GanitSetuOfficial/community','_blank','noopener');
-        const pkg=await makeCurrentPlatformPackage(platform);
-        const postText=[pkg.content.title,pkg.content.hook,pkg.content.caption||pkg.content.post,pkg.content.cta,pkg.content.hashtags].filter(Boolean).join('\n\n').trim();
-        if(currentType==='image'&&(generatedImageData||generatedImageUrl)){
-          const a=document.createElement('a');a.href=generatedImageData||generatedImageUrl;a.download=`GANIT_SETU_Q${currentQuestion?.id||'image'}.png`;a.target='_blank';document.body.appendChild(a);a.click();a.remove();
-        }
-        try{if(navigator.clipboard&&window.isSecureContext)await navigator.clipboard.writeText(postText);else {const ta=document.createElement('textarea');ta.value=postText;ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();ta.setSelectionRange(0,ta.value.length);document.execCommand('copy');ta.remove();}msg('YouTube Community खुल गया और मौजूदा पोस्ट टेक्स्ट कॉपी हो गया। इमेज पोस्ट के लिए डाउनलोड हुई इमेज जोड़ें; फिर मैन्युअल Post करें।','info');}
-        catch(e){msg('YouTube Community खुल गया। Preview से टेक्स्ट कॉपी करें और इमेज अलग से जोड़ें।','info');}
+          if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(postText).then(()=>msg('कैप्शन कॉपी हो गया। WhatsApp Channel में Ctrl+V करें।','success')).catch(()=>{});copied=true;}
+          else {const ta=document.createElement('textarea');ta.value=postText;ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();ta.setSelectionRange(0,ta.value.length);copied=!!document.execCommand('copy');ta.remove();}
+        }catch(e){copied=false;}
+        // Open the channel synchronously to avoid popup blockers.
+        window.open('https://whatsapp.com/channel/0029VbDLOBHICVfrePXZ363D','_blank','noopener');
+        if(isImagePost&&generatedImageData){try{const a=document.createElement('a');a.href=generatedImageData;a.download=`GANIT-SETU-Q${currentQuestion.id||'question'}.jpg`;document.body.appendChild(a);a.click();a.remove();}catch(e){console.warn('Image download failed',e);}}
+        if(!copied)msg('WhatsApp Channel खुल गया। कैप्शन कॉपी नहीं हो पाया—Preview के Copy बटन से कॉपी करें।','error');
+        else msg('कैप्शन कॉपी हो गया, WhatsApp Channel खुल गया और इमेज डाउनलोड शुरू की गई। वहाँ Ctrl+V करके इमेज जोड़ें और मैन्युअल रूप से शेयर करें।','info');
         return;
       }
       if(platform==='youtube'&&currentType==='post'){
