@@ -115,10 +115,31 @@ Ganit Setu — MP Board Mathematics Learning`,
     if($('currentPlatform'))$('currentPlatform').textContent=allowed.map(p=>PLATFORM_LABELS[p]).join(' • ');
     renderPlatformPreviews();
   }
-  // Fixed short caption for Image Post only; the question is already visible in the image.
+  // IMAGE POST ONLY: short hook + CTA + compact description; the question is already in the image.
   function imagePostCaption(){
-    return '🧠 अगर जीनियस हो, तो सही जवाब बताओ! 🔥\n\n👇 अपना जवाब कमेंट में लिखो!\n\n📚 रोज़ नए Maths Challenges के लिए Ganit Setu से जुड़ें।\n\n#GanitSetu #MathsChallenge #BrainTest #MPBoard #Class9Maths';
+    return [
+      '🧠 अगर जीनियस हो, तो सही जवाब बताओ! 🔥',
+      '👇 अपना जवाब कमेंट में लिखो!',
+      '📚 रोज़ नए Maths Challenges के लिए Ganit Setu से जुड़ें।',
+      '#GanitSetu #MathsChallenge #BrainTest #MPBoard #Class9Maths'
+    ].join('\n\n');
   }
+  function applyImagePostCaption(pkg){
+    if(!pkg || currentType!=='image') return pkg;
+    const caption=imagePostCaption();
+    pkg.caption=caption;
+    pkg.post=caption;
+    pkg.cta='👇 अपना जवाब कमेंट में लिखो!';
+    pkg.description='📚 रोज़ नए Maths Challenges के लिए Ganit Setu से जुड़ें।';
+    pkg.hashtags='#GanitSetu #MathsChallenge #BrainTest #MPBoard #Class9Maths';
+    pkg.platform_packages=pkg.platform_packages||{};
+    for(const platform of ['facebook','instagram','youtube','whatsapp']){
+      const v=pkg.platform_packages[platform]&&typeof pkg.platform_packages[platform]==='object'?pkg.platform_packages[platform]:{};
+      pkg.platform_packages[platform]={...v,caption,post:caption,cta:pkg.cta,description:pkg.description,hashtags:pkg.hashtags};
+    }
+    return pkg;
+  }
+
   function renderPlatformPreviews(){
     const box=$('allPlatformPreviews');if(!box)return;
     if(!generatedPackage&&!(currentType==='image'&&generatedImageData)){box.innerHTML='<div class="empty">पहले Content Generate करें या Image सेक्शन में Master Template पर Question लिखें।</div>';return;}
@@ -146,7 +167,7 @@ Ganit Setu — MP Board Mathematics Learning`,
         : isQuestionTextPost
           ? [qCaption(currentQuestion)]
           : [v.title||base.title, v.hook||base.hook, v.caption||v.post||base.caption||base.post, v.cta||base.cta, Array.isArray(v.hashtags)?v.hashtags.join(' '):(v.hashtags||base.hashtags)]
-              .map(x=>String(x||'').trim()).filter(Boolean);
+            .map(x=>String(x||'').trim()).filter(Boolean);
       const text=parts.join('\n\n').trim();
       if(!text)return msg('कॉपी करने के लिए पोस्ट का टेक्स्ट खाली है।','error');
       try{
@@ -168,13 +189,6 @@ Ganit Setu — MP Board Mathematics Learning`,
       content.caption=qCaption(currentQuestion);
       content.post=content.caption;
       content.title=`कक्षा ${currentQuestion.class_level} गणित | अध्याय ${currentQuestion.chapter_number} — ${currentQuestion.chapter_name||''}`;
-    }
-    // Image Post uses a short hook/CTA/description; never repeat the question already shown in its image.
-    if(currentType==='image'){
-      content.caption=imagePostCaption();
-      content.post=content.caption;
-      content.description='📚 रोज़ नए Maths Challenges के लिए Ganit Setu से जुड़ें।';
-      content.hashtags='#GanitSetu #MathsChallenge #BrainTest #MPBoard #Class9Maths';
     }
     content.hashtags=Array.isArray(content.hashtags)?content.hashtags.join(' '):(content.hashtags||'');
     content.keywords=Array.isArray(content.keywords)?content.keywords.join(', '):(content.keywords||'');
@@ -366,6 +380,7 @@ Ganit Setu — MP Board Mathematics Learning`,
       if(!responseText)throw new Error('Gemini response में text/content नहीं मिला: '+JSON.stringify(d).slice(0,500));
       const pkg=parseImagePackageSafely(responseText);
       if(!pkg)throw new Error('Gemini का Image Content JSON पढ़ा नहीं जा सका। शुरुआती उत्तर: '+String(responseText).slice(0,450));
+      applyImagePostCaption(pkg);
       renderPackageFields(pkg);
       if($('postStatus'))$('postStatus').textContent='GEMINI • IMAGE CONTENT PREVIEWS READY';
       if($('saveDraft'))$('saveDraft').disabled=false;
