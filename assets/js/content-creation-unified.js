@@ -208,34 +208,24 @@ Ganit Setu — MP Board Mathematics Learning`,
     if(platform==='facebook') msg('Facebook को पोस्ट भेजी जा रही है। कृपया परिणाम आने तक पेज बंद न करें।','info');
     try{
       if(platform==='whatsapp'){
-        // Open the user's existing Ganit Setu WhatsApp Channel; publishing remains manual.
+        // WhatsApp-only behavior: keep all generated content untouched; open the existing channel,
+        // copy the exact current post text, and download the current generated image when available.
         window.open('https://whatsapp.com/channel/0029VbDLOBHICVfrePXZ363D','_blank','noopener');
         const pkg=await makeCurrentPlatformPackage(platform);
-        // Image Post only: download the exact image currently used by the preview.
-        // Keep the established WhatsApp Channel URL and all caption/content logic unchanged.
-        if(currentType==='image'){
-          try{
-            const imageSource=generatedImageData||generatedImageUrl||pkg.media_url||'';
-            if(imageSource){
-              const a=document.createElement('a');
-              a.href=imageSource;
-              a.download=`Ganit-Setu-Q${currentQuestion?.id||'Image'}.jpg`;
-              a.style.display='none';
-              document.body.appendChild(a);
-              a.click();
-              a.remove();
-            } else {
-              msg('WhatsApp Channel खुल गया और कैप्शन कॉपी हो गया, लेकिन इमेज उपलब्ध नहीं है। पहले इमेज Generate करें।','warning');
-            }
-          }catch(downloadError){console.warn('[Ganit Setu] WhatsApp image download failed',downloadError);}
-        }
         const isQuestionPost=currentType==='post'&&(($('postType')?.value||'question')==='question')&&!!currentQuestion;
         const postText=(isQuestionPost?qCaption(currentQuestion):[pkg.content.title,pkg.content.hook,pkg.content.caption||pkg.content.post,pkg.content.cta,pkg.content.hashtags].filter(Boolean).join('\n\n')).trim();
         try{
           if(navigator.clipboard&&window.isSecureContext)await navigator.clipboard.writeText(postText);
           else {const ta=document.createElement('textarea');ta.value=postText;ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();ta.setSelectionRange(0,ta.value.length);const ok=document.execCommand('copy');ta.remove();if(!ok)throw new Error('copy failed');}
-          msg('पूरा पोस्ट कॉपी हो गया और Ganit Setu WhatsApp Channel खुल गया। वहाँ पोस्ट बॉक्स में Ctrl+V करें और मैन्युअल रूप से शेयर करें। अभी स्वतः प्रकाशित नहीं हुआ।','info');
-        }catch(e){msg('WhatsApp Channel खुल गया, लेकिन ऑटो-कॉपी नहीं हो पाया। Preview से टेक्स्ट चुनकर Ctrl+C करें। पोस्ट मैन्युअल रूप से शेयर होगा।','error');}
+          let imageDownloaded=false;
+          if(currentType==='image'){
+            const imageSource=generatedImageData||generatedImageUrl||'';
+            if(imageSource){
+              const a=document.createElement('a');a.href=imageSource;a.download='ganit-setu-question.png';a.style.display='none';document.body.appendChild(a);a.click();a.remove();imageDownloaded=true;
+            }
+          }
+          msg(imageDownloaded?'कैप्शन कॉपी हो गया, सवाल वाली इमेज डाउनलोड शुरू हो गई और Ganit Setu WhatsApp Channel खुल गया। वहाँ इमेज जोड़कर Ctrl+V करें और मैन्युअल रूप से शेयर करें।':'कैप्शन कॉपी हो गया और Ganit Setu WhatsApp Channel खुल गया। इमेज उपलब्ध न होने पर उसे Preview से सेव करें। पोस्ट मैन्युअल रूप से शेयर करें।','info');
+        }catch(e){msg('WhatsApp Channel खुल गया, लेकिन कॉपी/इमेज डाउनलोड पूरा नहीं हो पाया। Preview से टेक्स्ट कॉपी और इमेज सेव करें।','error');}
         return;
       }
       if(platform==='youtube'&&(currentType==='post'||currentType==='image')){
