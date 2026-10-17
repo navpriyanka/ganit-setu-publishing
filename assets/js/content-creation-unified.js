@@ -21,6 +21,28 @@
   function msg(t,kind='info'){const e=$('ccNotice');if(e){e.textContent=t;e.className='notice '+kind;e.hidden=false;setTimeout(()=>e.hidden=true,5000)}}
   async function session(){const {data,error}=await sb.auth.getSession();if(error)throw error;if(!data?.session?.access_token)throw new Error('Admin session उपलब्ध नहीं है। कृपया Admin Panel में login करें।');return data.session.access_token}
   function qCaption(q){return ['📘 GANIT SETU',`कक्षा ${q.class_level} | अध्याय ${q.chapter_number} — ${q.chapter_name||''}`,'','🧮 आज का गणित प्रश्न:',q.question_text,'',`A) ${q.option_a}`,`B) ${q.option_b}`,`C) ${q.option_c}`,`D) ${q.option_d}`,'','🤔 आपका उत्तर क्या है? Comment करके बताइए!','','#GanitSetu #MPBoard #Mathematics #MathsQuestion #Class'+q.class_level].join('\n')}
+  // Image Post captions are anchored to the exact question used to render the image.
+  // Keep hashtags ASCII-only to avoid broken Devanagari hashtags on social platforms.
+  function imageQuestionCaption(q, platform='facebook', variant={}, base={}){
+    if(!q)return '';
+    const platformCta={
+      facebook:'संख्या पद्धति का यह प्रश्न हल करें और अपनी तैयारी जाँचें।',
+      instagram:'प्रश्न हल करें और अपना उत्तर कमेंट में लिखें! 📐',
+      youtube:'MP Board Class '+q.class_level+' Maths | Chapter '+q.chapter_number+' Practice Question',
+      whatsapp:'आज का गणित प्रश्न — अपना उत्तर बताइए।'
+    };
+    const rawTags=[variant.hashtags,base.hashtags].flat().map(x=>Array.isArray(x)?x.join(' '):String(x||'')).join(' ');
+    const safeTags=[...rawTags.matchAll(/#[A-Za-z0-9_]+/g)].map(m=>m[0]);
+    const defaults=['#GanitSetu','#MPBoard','#Mathematics','#MathsQuestion','#Class'+q.class_level];
+    const tags=[...new Set([...safeTags,...defaults])].slice(0,15).join(' ');
+    return [
+      '📘 GANIT SETU',
+      `कक्षा ${q.class_level} | अध्याय ${q.chapter_number} — ${q.chapter_name||''}`,
+      '', '🧮 आज का गणित प्रश्न:', q.question_text||'',
+      '', `A) ${q.option_a}`, `B) ${q.option_b}`, `C) ${q.option_c}`, `D) ${q.option_d}`,
+      '', platformCta[platform]||platformCta.facebook, '', tags
+    ].filter((line,index,arr)=>line!==''|| (index>0&&arr[index-1]!=='' )).join('\n').trim();
+  }
   // Keep hashtags as a properly spaced caption line; do not send a second hashtag field.
   function captionWithHashtags(value, tags){
     const body=String(value||'').replace(/(^|\s)#[\p{L}\p{N}_]+/gu,' ').replace(/[ \t]+/g,' ').split('\n').map(line=>line.trim()).filter(Boolean).join('\n').trim();
@@ -124,7 +146,8 @@ Ganit Setu — MP Board Mathematics Learning`,
       // For a question-based Text Post, every platform must use the exact same selected question.
       // AI-generated per-platform variants may vary the question, so do not trust them for this case.
       const isQuestionTextPost=currentType==='post'&&(($('postType')?.value||'question')==='question')&&!!currentQuestion;
-      const caption=isQuestionTextPost?qCaption(currentQuestion):(v.caption||v.post||base.caption||base.post||'');
+      const isImageQuestion=currentType==='image'&&!!currentQuestion;
+      const caption=isQuestionTextPost?qCaption(currentQuestion):isImageQuestion?imageQuestionCaption(currentQuestion,platform,v,base):(v.caption||v.post||base.caption||base.post||'');
       const isYouTubeTextPost=platform==='youtube'&&currentType==='post';
       const note=isYouTubeTextPost?'टेक्स्ट कॉपी होगा और YouTube Community खुलेगा। अंतिम Post बटन वहाँ दबाना होगा।':platform==='whatsapp'?'पूरा पोस्ट कॉपी होगा और मौजूदा Ganit Setu WhatsApp Channel खुलेगा। वहाँ मैन्युअल रूप से शेयर करें।':platform==='instagram'&&currentType==='post'?'Text-only Instagram publish उपलब्ध नहीं।':'';
       const canPublish=platform==='facebook' || platform==='whatsapp' || (platform==='instagram'&&currentType!=='post'&&!!(generatedImageUrl||generatedImageData||videoUrl)) || (platform==='youtube'&&(isYouTubeTextPost||!!videoUrl&&currentType!=='post'));
@@ -136,9 +159,10 @@ Ganit Setu — MP Board Mathematics Learning`,
       const platform=btn.dataset.copyPlatform;
       const v=(base.platform_packages||{})[platform]||base;
       const isQuestionTextPost=currentType==='post'&&(($('postType')?.value||'question')==='question')&&!!currentQuestion;
-      // Copy the complete post, not just the first caption/line.
-      const parts=isQuestionTextPost
-        ? [qCaption(currentQuestion)]
+      const isImageQuestion=currentType==='image'&&!!currentQuestion;
+      // Copy exact question/options for image mode so caption can never describe a different question.
+      const parts=(isQuestionTextPost||isImageQuestion)
+        ? [isQuestionTextPost?qCaption(currentQuestion):imageQuestionCaption(currentQuestion,platform,v,base)]
         : [v.title||base.title, v.hook||base.hook, v.caption||v.post||base.caption||base.post, v.cta||base.cta, Array.isArray(v.hashtags)?v.hashtags.join(' '):(v.hashtags||base.hashtags)]
             .map(x=>String(x||'').trim()).filter(Boolean);
       const text=parts.join('\n\n').trim();
@@ -162,6 +186,13 @@ Ganit Setu — MP Board Mathematics Learning`,
       content.caption=qCaption(currentQuestion);
       content.post=content.caption;
       content.title=`कक्षा ${currentQuestion.class_level} गणित | अध्याय ${currentQuestion.chapter_number} — ${currentQuestion.chapter_name||''}`;
+    } else if(currentType==='image'&&currentQuestion){
+      // Critical consistency guard: the published caption is rebuilt from the same Question
+      // currently used by the image canvas, never from a stale AI draft.
+      content.caption=imageQuestionCaption(currentQuestion,platform,v,base);
+      content.post=content.caption;
+      content.title=`कक्षा ${currentQuestion.class_level} गणित | अध्याय ${currentQuestion.chapter_number} — ${currentQuestion.chapter_name||''}`;
+      content.hashtags=(content.caption.match(/#[A-Za-z0-9_]+/g)||[]).join(' ');
     }
     content.hashtags=Array.isArray(content.hashtags)?content.hashtags.join(' '):(content.hashtags||'');
     content.keywords=Array.isArray(content.keywords)?content.keywords.join(', '):(content.keywords||'');
@@ -686,6 +717,12 @@ Ganit Setu — MP Board Mathematics Learning`,
       if(!rows.length)throw new Error(`Class ${cls}${chapter!=='all'?' Chapter '+chapter:''} के लिए उपलब्ध विकल्पों सहित प्रश्न नहीं मिला।`);
       const prior=read('gsRecentQuestionIds',[]);let candidates=rows.filter(q=>!prior.includes(String(q.id)));if(!candidates.length)candidates=rows;
       const q=candidates[Math.floor(Math.random()*candidates.length)];
+      if(currentType==='image'){
+        generatedImageData='';generatedImageUrl='';generatedPackage=null;generatedDraft='';
+        if($('imagePreview'))$('imagePreview').src='';
+        if($('imagePreviewWrap'))$('imagePreviewWrap').hidden=true;
+        if($('saveDraft'))$('saveDraft').disabled=true;
+      }
       write('gsRecentQuestionIds',[String(q.id),...prior.filter(id=>String(id)!==String(q.id))].slice(0,Math.min(100,Math.max(1,rows.length-1))));
       renderQuestion(q);msg(`नया प्रश्न लोड हो गया: Q${q.id}`,'success');
     }catch(e){msg('Question load नहीं हुआ: '+(e.message||e),'error')}
