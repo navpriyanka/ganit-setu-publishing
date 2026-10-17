@@ -24,24 +24,17 @@
   // Image Post captions are anchored to the exact question used to render the image.
   // Keep hashtags ASCII-only to avoid broken Devanagari hashtags on social platforms.
   function imageQuestionCaption(q, platform='facebook', variant={}, base={}){
-    if(!q)return '';
-    const platformCta={
-      facebook:'संख्या पद्धति का यह प्रश्न हल करें और अपनी तैयारी जाँचें।',
-      instagram:'प्रश्न हल करें और अपना उत्तर कमेंट में लिखें! 📐',
-      youtube:'MP Board Class '+q.class_level+' Maths | Chapter '+q.chapter_number+' Practice Question',
-      whatsapp:'आज का गणित प्रश्न — अपना उत्तर बताइए।'
-    };
-    const rawTags=[variant.hashtags,base.hashtags].flat().map(x=>Array.isArray(x)?x.join(' '):String(x||'')).join(' ');
-    const safeTags=[...rawTags.matchAll(/#[A-Za-z0-9_]+/g)].map(m=>m[0]);
-    const defaults=['#GanitSetu','#MPBoard','#Mathematics','#MathsQuestion','#Class'+q.class_level];
-    const tags=[...new Set([...safeTags,...defaults])].slice(0,15).join(' ');
+    // Image already contains the question and options. Keep its social caption short;
+    // never repeat the full question in the caption. Image Post only.
     return [
-      '📘 GANIT SETU',
-      `कक्षा ${q.class_level} | अध्याय ${q.chapter_number} — ${q.chapter_name||''}`,
-      '', '🧮 आज का गणित प्रश्न:', q.question_text||'',
-      '', `A) ${q.option_a}`, `B) ${q.option_b}`, `C) ${q.option_c}`, `D) ${q.option_d}`,
-      '', platformCta[platform]||platformCta.facebook, '', tags
-    ].filter((line,index,arr)=>line!==''|| (index>0&&arr[index-1]!=='' )).join('\n').trim();
+      '🧠 अगर जीनियस हो, तो सही जवाब बताओ! 🔥',
+      '',
+      '👇 अपना जवाब कमेंट में लिखो!',
+      '',
+      '📚 रोज़ नए Maths Challenges के लिए Ganit Setu से जुड़ें।',
+      '',
+      '#GanitSetu #MathsChallenge #BrainTest #MPBoard #Class9Maths'
+    ].join('\n');
   }
   // Keep hashtags as a properly spaced caption line; do not send a second hashtag field.
   function captionWithHashtags(value, tags){
@@ -281,6 +274,20 @@ Ganit Setu — MP Board Mathematics Learning`,
     msg('Schedule अभी वास्तविक रूप से सक्रिय नहीं है। Facebook/Instagram के लिए server-side scheduler और YouTube/WhatsApp के लिए manual posting workflow चाहिए। अभी कोई पोस्ट schedule नहीं की गई।','info');
   }
   function renderPackageFields(pkg){
+    // Normalize the actual Image Post package fields as well as preview/copy/publish.
+    // This branch is deliberately limited to Image Post; Text Post remains unchanged.
+    if(pkg && currentType==='image'){
+      const shortCaption=imageQuestionCaption(currentQuestion);
+      const shortDescription='📚 रोज़ नए Maths Challenges के लिए Ganit Setu से जुड़ें।';
+      const shortHashtags='#GanitSetu #MathsChallenge #BrainTest #MPBoard #Class9Maths';
+      const variants=pkg.platform_packages&&typeof pkg.platform_packages==='object'?pkg.platform_packages:{};
+      const platform_packages={...variants};
+      for(const platform of ['facebook','instagram','youtube','whatsapp']){
+        const v=platform_packages[platform]&&typeof platform_packages[platform]==='object'?platform_packages[platform]:{};
+        platform_packages[platform]={...v,caption:shortCaption,post:shortCaption,description:shortDescription,hashtags:shortHashtags};
+      }
+      pkg={...pkg,post:shortCaption,caption:shortCaption,description:shortDescription,cta:'👇 अपना जवाब कमेंट में लिखो!',hashtags:shortHashtags,platform_packages};
+    }
     generatedPackage=pkg||null;
     generatedDraft=pkg?.post||'';
     if($('pkgTitle')) $('pkgTitle').value=pkg?.title||'';
