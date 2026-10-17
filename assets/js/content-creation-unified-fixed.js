@@ -115,6 +115,10 @@ Ganit Setu — MP Board Mathematics Learning`,
     if($('currentPlatform'))$('currentPlatform').textContent=allowed.map(p=>PLATFORM_LABELS[p]).join(' • ');
     renderPlatformPreviews();
   }
+  // Fixed short caption for Image Post only; the question is already visible in the image.
+  function imagePostCaption(){
+    return '🧠 अगर जीनियस हो, तो सही जवाब बताओ! 🔥\n\n👇 अपना जवाब कमेंट में लिखो!\n\n📚 रोज़ नए Maths Challenges के लिए Ganit Setu से जुड़ें।\n\n#GanitSetu #MathsChallenge #BrainTest #MPBoard #Class9Maths';
+  }
   function renderPlatformPreviews(){
     const box=$('allPlatformPreviews');if(!box)return;
     if(!generatedPackage&&!(currentType==='image'&&generatedImageData)){box.innerHTML='<div class="empty">पहले Content Generate करें या Image सेक्शन में Master Template पर Question लिखें।</div>';return;}
@@ -124,7 +128,7 @@ Ganit Setu — MP Board Mathematics Learning`,
       // For a question-based Text Post, every platform must use the exact same selected question.
       // AI-generated per-platform variants may vary the question, so do not trust them for this case.
       const isQuestionTextPost=currentType==='post'&&(($('postType')?.value||'question')==='question')&&!!currentQuestion;
-      const caption=isQuestionTextPost?qCaption(currentQuestion):(v.caption||v.post||base.caption||base.post||'');
+      const caption=currentType==='image'?imagePostCaption():(isQuestionTextPost?qCaption(currentQuestion):(v.caption||v.post||base.caption||base.post||''));
       const isYouTubeTextPost=platform==='youtube'&&currentType==='post';
       const note=isYouTubeTextPost?'टेक्स्ट कॉपी होगा और YouTube Community खुलेगा। अंतिम Post बटन वहाँ दबाना होगा।':platform==='whatsapp'?'पूरा पोस्ट कॉपी होगा और मौजूदा Ganit Setu WhatsApp Channel खुलेगा। वहाँ मैन्युअल रूप से शेयर करें।':platform==='instagram'&&currentType==='post'?'Text-only Instagram publish उपलब्ध नहीं।':'';
       const canPublish=platform==='facebook' || platform==='whatsapp' || (platform==='instagram'&&currentType!=='post'&&!!(generatedImageUrl||generatedImageData||videoUrl)) || (platform==='youtube'&&(isYouTubeTextPost||!!videoUrl&&currentType!=='post'));
@@ -137,10 +141,12 @@ Ganit Setu — MP Board Mathematics Learning`,
       const v=(base.platform_packages||{})[platform]||base;
       const isQuestionTextPost=currentType==='post'&&(($('postType')?.value||'question')==='question')&&!!currentQuestion;
       // Copy the complete post, not just the first caption/line.
-      const parts=isQuestionTextPost
-        ? [qCaption(currentQuestion)]
-        : [v.title||base.title, v.hook||base.hook, v.caption||v.post||base.caption||base.post, v.cta||base.cta, Array.isArray(v.hashtags)?v.hashtags.join(' '):(v.hashtags||base.hashtags)]
-            .map(x=>String(x||'').trim()).filter(Boolean);
+      const parts=currentType==='image'
+        ? [imagePostCaption()]
+        : isQuestionTextPost
+          ? [qCaption(currentQuestion)]
+          : [v.title||base.title, v.hook||base.hook, v.caption||v.post||base.caption||base.post, v.cta||base.cta, Array.isArray(v.hashtags)?v.hashtags.join(' '):(v.hashtags||base.hashtags)]
+              .map(x=>String(x||'').trim()).filter(Boolean);
       const text=parts.join('\n\n').trim();
       if(!text)return msg('कॉपी करने के लिए पोस्ट का टेक्स्ट खाली है।','error');
       try{
@@ -162,6 +168,13 @@ Ganit Setu — MP Board Mathematics Learning`,
       content.caption=qCaption(currentQuestion);
       content.post=content.caption;
       content.title=`कक्षा ${currentQuestion.class_level} गणित | अध्याय ${currentQuestion.chapter_number} — ${currentQuestion.chapter_name||''}`;
+    }
+    // Image Post uses a short hook/CTA/description; never repeat the question already shown in its image.
+    if(currentType==='image'){
+      content.caption=imagePostCaption();
+      content.post=content.caption;
+      content.description='📚 रोज़ नए Maths Challenges के लिए Ganit Setu से जुड़ें।';
+      content.hashtags='#GanitSetu #MathsChallenge #BrainTest #MPBoard #Class9Maths';
     }
     content.hashtags=Array.isArray(content.hashtags)?content.hashtags.join(' '):(content.hashtags||'');
     content.keywords=Array.isArray(content.keywords)?content.keywords.join(', '):(content.keywords||'');
@@ -276,209 +289,95 @@ Ganit Setu — MP Board Mathematics Learning`,
       explanation:$('pkgExplanation')?.value.trim()||base.explanation||''
     };
   }
-function parseImagePackageSafely(text){
-  let s = String(text || '').trim();
-  const fenced = s.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-  if (fenced) s = fenced[1].trim();
-
-  const first = s.indexOf('{');
-  const last = s.lastIndexOf('}');
-  if (first < 0 || last <= first) return null;
-  s = s.slice(first, last + 1);
-
-  // Repair literal line breaks/tabs inside JSON strings returned by Gemini.
-  let fixed = '';
-  let inString = false;
-  let escaped = false;
-  for (let i = 0; i < s.length; i++) {
-    const c = s[i];
-    if (inString) {
-      if (escaped) {
-        fixed += c;
-        escaped = false;
-      } else if (c === '\\') {
-        fixed += c;
-        escaped = true;
-      } else if (c === '"') {
-        fixed += c;
-        inString = false;
-      } else if (c === '\n') {
-        fixed += '\\n';
-      } else if (c === '\r') {
-        fixed += '\\r';
-      } else if (c === '\t') {
-        fixed += '\\t';
-      } else {
-        fixed += c;
-      }
-    } else {
-      fixed += c;
-      if (c === '"') inString = true;
+  // Image-specific parser: keep Text Post's original parser/workflow untouched.
+  function parseImagePackageSafely(text){
+    let candidate=String(text||'').trim();
+    const fenced=candidate.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    if(fenced)candidate=fenced[1].trim();
+    const first=candidate.indexOf('{'),last=candidate.lastIndexOf('}');
+    if(first<0||last<=first)return null;
+    candidate=candidate.slice(first,last+1);
+    let repaired='',inString=false,escaped=false;
+    for(let i=0;i<candidate.length;i++){
+      const ch=candidate[i];
+      if(inString){
+        if(escaped){repaired+=ch;escaped=false;}
+        else if(ch==='\\'){repaired+=ch;escaped=true;}
+        else if(ch==='"'){repaired+=ch;inString=false;}
+        else if(ch==='\n')repaired+='\\n';
+        else if(ch==='\r')repaired+='\\r';
+        else if(ch==='\t')repaired+='\\t';
+        else repaired+=ch;
+      }else{repaired+=ch;if(ch==='"')inString=true;}
     }
-  }
-
-  try {
-    const o = JSON.parse(fixed);
-    if (!o || typeof o !== 'object' || Array.isArray(o)) return null;
-
-    const platformData = o.platform_packages && typeof o.platform_packages === 'object'
-      ? o.platform_packages : {};
-    const fb = platformData.facebook || {};
-    const ig = platformData.instagram || {};
-    const yt = platformData.youtube || {};
-    const wa = platformData.whatsapp || {};
-    const fallback = [fb, ig, wa, yt].find(p => p && (p.post || p.caption || p.description)) || {};
-
-    const pkg = {
-      title: o.title || fb.title || ig.title || yt.title || wa.title || '',
-      hook: o.hook || fallback.hook || '',
-      post: o.post || o.main_post || o.content || fallback.post || '',
-      caption: o.caption || fallback.caption || fallback.post || '',
-      description: o.description || yt.description || fallback.description || '',
-      cta: o.cta || fallback.cta || '',
-      hashtags: Array.isArray(o.hashtags) ? o.hashtags.join(' ') : (o.hashtags || fallback.hashtags || ''),
-      keywords: Array.isArray(o.keywords) ? o.keywords.join(', ') : (o.keywords || o.tags || yt.keywords || fallback.keywords || ''),
-      answer_comment: o.answer_comment || o.answerComment || fallback.answer_comment || '',
-      hint: o.hint || currentQuestion?.hint || '',
-      explanation: o.explanation || currentQuestion?.explanation || '',
-      platform_packages: platformData
-    };
-
-    ['facebook', 'instagram', 'youtube', 'whatsapp'].forEach(platform => {
-      if (!pkg.platform_packages[platform] || typeof pkg.platform_packages[platform] !== 'object') {
-        pkg.platform_packages[platform] = {
-          title: pkg.title,
-          hook: pkg.hook,
-          post: pkg.post,
-          caption: pkg.caption || pkg.post,
-          description: pkg.description,
-          cta: pkg.cta,
-          hashtags: pkg.hashtags,
-          keywords: pkg.keywords,
-          answer_comment: pkg.answer_comment
+    try{
+      const o=JSON.parse(repaired);
+      if(!o||typeof o!=='object'||Array.isArray(o))return null;
+      const variants=o.platform_packages&&typeof o.platform_packages==='object'?{...o.platform_packages}:{};
+      const pkg={
+        title:o.title||'',hook:o.hook||'',post:o.post||o.main_post||o.content||'',
+        caption:o.caption||'',description:o.description||'',cta:o.cta||'',
+        hashtags:Array.isArray(o.hashtags)?o.hashtags.join(' '):(o.hashtags||''),
+        keywords:Array.isArray(o.keywords)?o.keywords.join(', '):(o.keywords||o.tags||''),
+        answer_comment:o.answer_comment||o.answerComment||'',
+        hint:o.hint||currentQuestion?.hint||'',
+        explanation:o.explanation||currentQuestion?.explanation||'',
+        platform_packages:variants
+      };
+      const platforms=['facebook','instagram','youtube','whatsapp'];
+      for(const platform of platforms){
+        const v=variants[platform]&&typeof variants[platform]==='object'?variants[platform]:{};
+        variants[platform]={
+          title:v.title||pkg.title,hook:v.hook||pkg.hook,
+          post:v.post||v.main_post||v.content||pkg.post,
+          caption:v.caption||pkg.caption||pkg.post,
+          description:v.description||pkg.description,cta:v.cta||pkg.cta,
+          hashtags:Array.isArray(v.hashtags)?v.hashtags.join(' '):(v.hashtags||pkg.hashtags),
+          keywords:Array.isArray(v.keywords)?v.keywords.join(', '):(v.keywords||pkg.keywords),
+          answer_comment:v.answer_comment||v.answerComment||pkg.answer_comment
         };
       }
-    });
-    return pkg;
-  } catch (e) {
-    console.error('[Ganit Setu] Image JSON parse error:', e);
-    return null;
-  }
-}
-
-async function generateImageContentPackage(){
-  const btn = $('generateImageContent');
-  if (!btn) return;
-
-  if (!currentQuestion) {
-    msg('पहले Image Post के लिए Question Generate करें।', 'error');
-    return;
+      pkg.platform_packages=variants;
+      // Use a meaningful platform draft if the top-level post is omitted.
+      if(!pkg.post){const fallback=variants.facebook||variants.instagram||variants.whatsapp||variants.youtube;pkg.post=fallback?.post||fallback?.caption||'';}
+      if(!pkg.caption)pkg.caption=variants.facebook?.caption||pkg.post;
+      return pkg;
+    }catch(e){console.error('[Ganit Setu] Image package JSON parse error:',e);return null;}
   }
 
-  btn.disabled = true;
-  const oldLabel = btn.textContent;
-  btn.textContent = '⏳ Image Content Package बन रहा है...';
-
-  try {
-    const token = await session();
-    const selectedType = $('postType')?.value || 'question';
-    const language = $('postLanguage')?.value || 'hi';
-    const topic = packagePrompt();
-    const master = selectedMasterPrompt();
-
-    if (!master || !master.trim()) {
-      throw new Error('Master Prompt खाली है। पहले Master Prompt सेव करें।');
-    }
-
-    const payload = {
-      type: selectedType,
-      classLevel: String(
-        currentQuestion.class_level || $('ccClass')?.value || 9
-      ),
-      language,
-      topic,
-      prompt: topic,
-      masterPrompt: master,
-      question: currentQuestion,
-      platforms: ['facebook', 'instagram', 'youtube', 'whatsapp']
-    };
-
-    const response = await fetch(AI_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        'apikey': ANON
-      },
-      body: JSON.stringify(payload)
-    });
-
-    const raw = await response.text();
-    let data;
-    try {
-      data = JSON.parse(raw);
-    } catch {
-      data = { error: raw };
-    }
-
-    if (!response.ok) {
-      const detail = typeof data.error === 'string'
-        ? data.error
-        : (data.error?.message || data.message || raw);
-      throw new Error(`Gemini request failed (${response.status}): ${detail}`);
-    }
-
-    let responseText =
-      data.text ??
-      data.content ??
-      data.result?.text ??
-      data.data?.text ??
-      data.output_text ??
-      '';
-
-    // कुछ responses में content सीधे object हो सकता है।
-    if (responseText && typeof responseText === 'object') {
-      responseText = JSON.stringify(responseText);
-    }
-
-    if (!responseText) {
-      throw new Error(
-        'Gemini response में text/content नहीं मिला: ' +
-        JSON.stringify(data).slice(0, 500)
-      );
-    }
-
-    const pkg = parseImagePackageSafely(responseText);
-
-    if (!pkg) {
-      throw new Error(
-        'Image Content का JSON ठीक से पढ़ा नहीं जा सका। उत्तर का शुरुआती भाग: ' +
-        String(responseText).slice(0, 450)
-      );
-    }
-
-    renderPackageFields(pkg);
-
-    if ($('postStatus')) {
-      $('postStatus').textContent =
-        'GEMINI • IMAGE CONTENT PREVIEWS READY';
-    }
-    if ($('saveDraft')) $('saveDraft').disabled = false;
-
-    renderPlatformPreviews();
-    msg(
-      'Image Content Package तैयार है। Preview जाँचकर Save All करें।',
-      'success'
-    );
-  } catch (e) {
-    if ($('postStatus')) $('postStatus').textContent = 'ERROR';
-    msg(e.message || 'Image Content Generate नहीं हो पाया।', 'error');
-    console.error('[Ganit Setu] Image package generation failed:', e);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = oldLabel || '✨ पूरा Content Package Generate करें';
+  async function generateImageContentPackage(){
+    const btn=$('generateImageContent');if(!btn)return;
+    const oldLabel=btn.textContent;
+    btn.disabled=true;btn.textContent='⏳ पूरा Image Content Package बन रहा है...';
+    try{
+      if(!currentQuestion)throw new Error('पहले Image Post के लिए Generate New Question दबाएँ।');
+      const token=await session();
+      const type=$('postType')?.value||'question';
+      const language=$('postLanguage')?.value||'hi';
+      const topic=packagePrompt();
+      const master=selectedMasterPrompt();
+      if(!master||!master.trim())throw new Error('Master Prompt खाली है। Master Prompts खोलकर सेव करें।');
+      const payload={type,classLevel:String(currentQuestion.class_level||$('ccClass')?.value||9),language,topic,prompt:topic,masterPrompt:master,question:currentQuestion,platforms:['facebook','instagram','youtube','whatsapp']};
+      const r=await fetch(AI_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`,'apikey':ANON},body:JSON.stringify(payload)});
+      const raw=await r.text();let d;try{d=JSON.parse(raw)}catch{d={error:raw};}
+      if(!r.ok){const detail=typeof d.error==='string'?d.error:(d.error?.message||d.message||raw||`HTTP ${r.status}`);throw new Error(`Gemini request failed (${r.status}): ${detail}`);}
+      let responseText=d.text??d.content??d.result?.text??d.data?.text??d.output_text??'';
+      if(responseText&&typeof responseText==='object')responseText=JSON.stringify(responseText);
+      if(!responseText)throw new Error('Gemini response में text/content नहीं मिला: '+JSON.stringify(d).slice(0,500));
+      const pkg=parseImagePackageSafely(responseText);
+      if(!pkg)throw new Error('Gemini का Image Content JSON पढ़ा नहीं जा सका। शुरुआती उत्तर: '+String(responseText).slice(0,450));
+      renderPackageFields(pkg);
+      if($('postStatus'))$('postStatus').textContent='GEMINI • IMAGE CONTENT PREVIEWS READY';
+      if($('saveDraft'))$('saveDraft').disabled=false;
+      renderPlatformPreviews();
+      saveActiveTypeState();
+      msg('Image Content Package तैयार है। चारों Preview जाँचकर Save All करें।','success');
+    }catch(e){
+      if($('postStatus'))$('postStatus').textContent='ERROR';
+      msg(e.message||'Image Content Generate नहीं हो पाया।','error');
+      console.error('[Ganit Setu] Image package generation failed:',e);
+    }finally{btn.disabled=false;btn.textContent=oldLabel||'✨ पूरा Content Package Generate करें';}
   }
-}
 
   async function generatePost(){
     const selectedType=$('postType')?.value||'question';
@@ -826,13 +725,7 @@ async function generateImageContentPackage(){
     document.querySelectorAll('[data-platform]').forEach(b=>b.onclick=e=>{if(e.target.closest('.platform-connect'))return;msg('Platform चुनने की जरूरत नहीं है—कंटेंट चारों प्लेटफॉर्म के लिए एक साथ तैयार होगा।','info')});
     document.querySelectorAll('[data-type]').forEach(b=>b.onclick=()=>switchContentType(b.dataset.type));
     document.querySelectorAll('.platform-connect').forEach(b=>b.onclick=e=>{e.stopPropagation();connectPlatform(b.dataset.connect)});
-    
-$('generatePost').onclick=generatePost;
-if($('generateImageContent')){
-  $('generateImageContent').onclick=generateImageContentPackage;
-}
-$('generateImage').onclick=generateImage;
-$('createVideo').onclick=videoModal;$('savePackage').onclick=savePackage;
+    $('generatePost').onclick=generatePost;if($('generateImageContent'))$('generateImageContent').onclick=generateImageContentPackage;$('generateImage').onclick=generateImage;$('createVideo').onclick=videoModal;$('savePackage').onclick=savePackage;
     $('previewPackage').onclick=()=>{const p=readPackageFields();$('previewQuestion').textContent=currentQuestion?`Q${currentQuestion.id}`:'—';$('previewText').textContent=JSON.stringify(p,null,2);$('previewImage').src=generatedImageData||generatedImageUrl||'';$('previewModal').hidden=false};$('closePreview').onclick=()=>$('previewModal').hidden=true;$('closeVideo').onclick=()=>{$('videoModal').hidden=true;$('videoFrame').src=''};
     window.addEventListener('message',e=>{if(e.data?.type==='GS_VIDEO_READY'&&currentQuestion&&String(e.data.question_id)===String(currentQuestion.id)){videoUrl=e.data.video_url||'';$('videoStatus').textContent='✅ Final Video Ready';$('videoLink').href=videoUrl;$('videoLink').hidden=!videoUrl;msg('Final video तैयार है। अब Save करके platform publish कर सकते हैं।','success')}})
   }
