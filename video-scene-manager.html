@@ -61,6 +61,13 @@
 <style>
 .qtm-video-size-note{font-size:10px;color:#475569;margin:5px 0 2px;text-align:center;background:#f1f5f9;border-radius:6px;padding:3px 5px}
 </style>
+
+<style>
+.gs-template-library{margin:18px 0;padding:16px;border:1px solid #cbd5e1;border-radius:16px;background:#fff;box-shadow:0 2px 8px rgba(15,23,42,.04)}
+.gs-template-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}.gs-template-head h2{margin:0 0 6px}.gs-template-head p{margin:0;color:#475569;max-width:780px}.gs-template-tag{display:inline-block;border-radius:999px;padding:6px 10px;background:#dcfce7;color:#166534;font-size:12px;font-weight:700}
+.gs-template-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:14px}.gs-template-card{border:1px solid #dbe3ef;border-radius:12px;padding:10px;min-width:0;background:#f8fafc}.gs-template-card-head{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;font-size:13px}.gs-template-ready{font-size:11px;border-radius:999px;background:#dcfce7;color:#166534;padding:4px 7px}.gs-template-card video{display:block;width:100%;max-height:360px;aspect-ratio:9/16;object-fit:contain;background:#111;border-radius:8px}.gs-template-card small{display:block;color:#64748b;font-size:11px;line-height:1.45;margin-top:7px}.gs-template-empty{aspect-ratio:9/16;max-height:360px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:8px;text-align:center;padding:14px;border:1px dashed #94a3b8;border-radius:8px;background:#f1f5f9;color:#475569;box-sizing:border-box}.gs-template-empty span{font-size:30px}.gs-template-empty b{font-size:13px}.gs-template-footnote{font-size:12px;line-height:1.5;color:#64748b;margin:12px 0 0}
+</style>
+
 </head>
 <body>
 <header class="topbar">
@@ -76,6 +83,26 @@
     </div>
     <a class="vsm-back" href="dashboard.html">← Dashboard</a>
   </div>
+
+  <section class="gs-template-library" aria-labelledby="gsTemplateHeading">
+    <div class="gs-template-head">
+      <div><h2 id="gsTemplateHeading">📚 स्थायी 5-Scene Video Template Library</h2>
+      <p>ये टेम्पलेट GitHub प्रोजेक्ट में रखे जाते हैं। Scene 1 का मूल MP4 जोड़ा गया है; Scene 2–5 के स्लॉट बाकी वीडियो मिलने तक खाली रहेंगे।</p></div>
+      <span class="gs-template-tag">Supabase Storage में template upload नहीं</span>
+    </div>
+    <div class="gs-template-grid" id="gsTemplateGrid">
+      <article class="gs-template-card" data-scene="1">
+        <div class="gs-template-card-head"><b>Scene 1 · Question Intro</b><span class="gs-template-ready">GitHub में शामिल</span></div>
+        <video controls playsinline preload="metadata" src="assets/videos/video-templates/scene-1.mp4"></video>
+        <small>मूल टेम्पलेट: लगभग 2 MB · 1080 × 1920 · 9:16</small>
+      </article>
+      <article class="gs-template-card is-empty" data-scene="2"><div class="gs-template-card-head"><b>Scene 2 · Options</b><span>खाली स्लॉट</span></div><div class="gs-template-empty"><span>🎬</span><b>MP4 अभी जोड़ा नहीं गया</b><small>वीडियो मिलने पर assets/videos/video-templates/scene-2.mp4 में जोड़ें।</small></div></article>
+      <article class="gs-template-card is-empty" data-scene="3"><div class="gs-template-card-head"><b>Scene 3 · Hint</b><span>खाली स्लॉट</span></div><div class="gs-template-empty"><span>🎬</span><b>MP4 अभी जोड़ा नहीं गया</b><small>वीडियो मिलने पर assets/videos/video-templates/scene-3.mp4 में जोड़ें।</small></div></article>
+      <article class="gs-template-card is-empty" data-scene="4"><div class="gs-template-card-head"><b>Scene 4 · Answer Reveal</b><span>खाली स्लॉट</span></div><div class="gs-template-empty"><span>🎬</span><b>MP4 अभी जोड़ा नहीं गया</b><small>वीडियो मिलने पर assets/videos/video-templates/scene-4.mp4 में जोड़ें।</small></div></article>
+      <article class="gs-template-card is-empty" data-scene="5"><div class="gs-template-card-head"><b>Scene 5 · CTA</b><span>खाली स्लॉट</span></div><div class="gs-template-empty"><span>🎬</span><b>MP4 अभी जोड़ा नहीं गया</b><small>वीडियो मिलने पर assets/videos/video-templates/scene-5.mp4 में जोड़ें।</small></div></article>
+    </div>
+    <p class="gs-template-footnote">नोट: इस लाइब्रेरी में वीडियो GitHub repository के static assets हैं। ब्राउज़र में चुनी गई फ़ाइल अपने-आप GitHub पर सेव नहीं होती; स्थायी बदलाव के लिए फ़ाइल को repository में commit/push करना होगा।</p>
+  </section>
 
   <div class="vsm-note">
     <b>🔒 Permanent Template + Image:</b>
