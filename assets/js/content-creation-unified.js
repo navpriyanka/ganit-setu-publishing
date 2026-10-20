@@ -514,10 +514,25 @@ Ganit Setu — MP Board Mathematics Learning`,
     c.width=W;c.height=H;
     const ctx=c.getContext('2d');
 
-    // Extend a neutral sampled background into the side margins.
-    // This avoids stretching the original art and preserves all of it.
+    // Full-bleed side fill for the 4:5 Image Post.
+    // Use a blurred, cover-scaled copy of the same template as the background,
+    // then place the complete original template on top without cropping or stretching it.
+    // This affects Image Post only; Reel/Video/Short scene generation is untouched.
+    const bleed=70;
+    const bgScale=Math.max(W/sourceW,H/sourceH);
+    const bgW=Math.ceil(sourceW*bgScale)+bleed*2;
+    const bgH=Math.ceil(sourceH*bgScale)+bleed*2;
+    ctx.save();
     ctx.fillStyle='#f5f7fb';
     ctx.fillRect(0,0,W,H);
+    ctx.filter='blur(34px)';
+    ctx.drawImage(template,(W-bgW)/2,(H-bgH)/2,bgW,bgH);
+    ctx.filter='none';
+    // Slight translucent wash keeps the side fill soft and prevents it competing with the board.
+    ctx.fillStyle='rgba(245,247,251,0.12)';
+    ctx.fillRect(0,0,W,H);
+    ctx.restore();
+    // Foreground template stays fully visible at its original aspect ratio.
     ctx.drawImage(template,offsetX,offsetY,drawW,drawH);
 
     // Draw question elements in the same coordinate system as the original template,
