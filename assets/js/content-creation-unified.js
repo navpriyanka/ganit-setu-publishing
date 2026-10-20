@@ -467,7 +467,7 @@ Ganit Setu — MP Board Mathematics Learning`,
   // No AI image generation is used here. Put the approved blank template at:
   // assets/images/content-post-template.png
   const IMAGE_TEMPLATE_URL=new URL('assets/images/content-post-template.png',document.baseURI).href;
-  const IMAGE_TEMPLATE_CONFIG={width:941,height:1672};
+  const IMAGE_TEMPLATE_CONFIG={width:1122,height:1402};
 
   function fitLines(ctx,text,maxWidth,maxLines,fontSize,minFontSize=20){
     let size=fontSize, lines=[];
@@ -500,48 +500,16 @@ Ganit Setu — MP Board Mathematics Learning`,
   try{
     const template=await loadImg(IMAGE_TEMPLATE_URL);
     const W=1440,H=1800;
-    const sourceW=template.naturalWidth||IMAGE_TEMPLATE_CONFIG.width;
-    const sourceH=template.naturalHeight||IMAGE_TEMPLATE_CONFIG.height;
-
-    // Fit the complete original 9:16 template inside the 4:5 canvas without cropping.
-    const scale=Math.min(W/sourceW,H/sourceH);
-    const drawW=Math.round(sourceW*scale);
-    const drawH=Math.round(sourceH*scale);
-    const offsetX=Math.round((W-drawW)/2);
-    const offsetY=Math.round((H-drawH)/2);
-
+    const sourceW=template.naturalWidth||1122;
+    const sourceH=template.naturalHeight||1402;
     const c=document.createElement('canvas');
     c.width=W;c.height=H;
     const ctx=c.getContext('2d');
-
-    // Full-bleed side fill for the 4:5 Image Post.
-    // Use a blurred, cover-scaled copy of the same template as the background,
-    // then place the complete original template on top without cropping or stretching it.
-    // This affects Image Post only; Reel/Video/Short scene generation is untouched.
-    const bleed=70;
-    const bgScale=Math.max(W/sourceW,H/sourceH);
-    const bgW=Math.ceil(sourceW*bgScale)+bleed*2;
-    const bgH=Math.ceil(sourceH*bgScale)+bleed*2;
+    // New blank 4:5 master template fills the complete canvas; no side bars or blur.
+    ctx.drawImage(template,0,0,W,H);
+    // Use master-template coordinates, scaled uniformly to the final 1440×1800 output.
     ctx.save();
-    ctx.fillStyle='#f5f7fb';
-    ctx.fillRect(0,0,W,H);
-    ctx.filter='blur(34px)';
-    ctx.drawImage(template,(W-bgW)/2,(H-bgH)/2,bgW,bgH);
-    ctx.filter='none';
-    // Slight translucent wash keeps the side fill soft and prevents it competing with the board.
-    ctx.fillStyle='rgba(245,247,251,0.12)';
-    ctx.fillRect(0,0,W,H);
-    ctx.restore();
-    // Foreground template stays fully visible at its original aspect ratio.
-    ctx.drawImage(template,offsetX,offsetY,drawW,drawH);
-
-    // Draw question elements in the same coordinate system as the original template,
-    // translated and scaled together so every element stays aligned with the board.
-    ctx.save();
-    ctx.translate(offsetX,offsetY);
-    ctx.scale(scale,scale);
-    const X=n=>n, Y=n=>n, S=n=>n;
-
+    ctx.scale(W/sourceW,H/sourceH);
     function fitLines(ctx,text,maxWidth,maxLines,fontSize,minFontSize=20){
       let size=fontSize,lines=[];
       const split=()=>{
@@ -557,96 +525,77 @@ Ganit Setu — MP Board Mathematics Learning`,
         }
         return out;
       };
-      while(size>minFontSize){
-        ctx.font=`700 ${size}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
-        lines=split();if(lines.length<=maxLines)break;size-=2;
-      }
+      while(size>minFontSize){ctx.font=`700 ${size}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;lines=split();if(lines.length<=maxLines)break;size-=2;}
       ctx.font=`700 ${size}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
       lines=split();
-      if(lines.length>maxLines){
-        lines=lines.slice(0,maxLines);
-        let last=lines[maxLines-1];
-        while(last.length&&ctx.measureText(last+'…').width>maxWidth)last=last.slice(0,-1);
-        lines[maxLines-1]=last+'…';
-      }
+      if(lines.length>maxLines){lines=lines.slice(0,maxLines);let last=lines[maxLines-1];while(last.length&&ctx.measureText(last+'…').width>maxWidth)last=last.slice(0,-1);lines[maxLines-1]=last+'…';}
       return{lines,size};
     }
-
-    // Original Image Post layout (coordinates are relative to the 941×1672 template).
+    // Header placed inside the blank upper part of the new board.
     ctx.save();ctx.shadowColor='rgba(13,48,91,.16)';ctx.shadowBlur=8;ctx.shadowOffsetY=3;
-    roundedRect(ctx,100,155,740,62,18);ctx.fillStyle='#123b85';ctx.fill();ctx.restore();
+    roundedRect(ctx,238,190,748,58,18);ctx.fillStyle='#123b85';ctx.fill();ctx.restore();
     ctx.fillStyle='#ffdf32';ctx.textAlign='center';ctx.textBaseline='middle';
     const chapterLine=`कक्षा ${currentQuestion.class_level}  •  अध्याय ${currentQuestion.chapter_number} — ${currentQuestion.chapter_name||''}`;
-    const chapterFit=fitLines(ctx,chapterLine,690,1,31,22);
+    const chapterFit=fitLines(ctx,chapterLine,700,1,31,22);
     ctx.font=`800 ${chapterFit.size}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
-    ctx.fillText(chapterLine,470,186,700);
+    ctx.fillText(chapterLine,612,219,710);
 
-    const qx=92,qy=242,qw=756,qh=245;
-    ctx.save();ctx.shadowColor='rgba(15,44,80,.15)';ctx.shadowBlur=12;ctx.shadowOffsetY=4;
-    roundedRect(ctx,qx,qy,qw,qh,25);ctx.fillStyle='#fffdf7';ctx.fill();ctx.restore();
-    ctx.lineWidth=5;ctx.strokeStyle='#f5a623';roundedRect(ctx,qx,qy,qw,qh,25);ctx.stroke();
-    ctx.save();ctx.shadowColor='rgba(245,166,35,.22)';ctx.shadowBlur=7;ctx.shadowOffsetY=2;
-    roundedRect(ctx,qx+14,qy-25,360,60,22);ctx.fillStyle='#ffdf32';ctx.fill();ctx.restore();
-    ctx.lineWidth=3;ctx.strokeStyle='#f5a623';roundedRect(ctx,qx+14,qy-25,360,60,22);ctx.stroke();
-    ctx.beginPath();ctx.arc(qx+47,qy+5,20,0,Math.PI*2);ctx.fillStyle='#123b85';ctx.fill();
-    ctx.fillStyle='#ffdf32';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='900 27px Arial,sans-serif';ctx.fillText('?',qx+47,qy+5);
+    const qx=238,qy=276,qw=748,qh=195;
+    ctx.save();ctx.shadowColor='rgba(15,44,80,.15)';ctx.shadowBlur=10;ctx.shadowOffsetY=4;
+    roundedRect(ctx,qx,qy,qw,qh,24);ctx.fillStyle='#fffdf7';ctx.fill();ctx.restore();
+    ctx.lineWidth=4;ctx.strokeStyle='#f5a623';roundedRect(ctx,qx,qy,qw,qh,24);ctx.stroke();
+    ctx.save();ctx.shadowColor='rgba(245,166,35,.22)';ctx.shadowBlur=6;ctx.shadowOffsetY=2;
+    roundedRect(ctx,qx+12,qy-22,350,52,20);ctx.fillStyle='#ffdf32';ctx.fill();ctx.restore();
+    ctx.lineWidth=3;ctx.strokeStyle='#f5a623';roundedRect(ctx,qx+12,qy-22,350,52,20);ctx.stroke();
+    ctx.beginPath();ctx.arc(qx+44,qy+4,18,0,Math.PI*2);ctx.fillStyle='#123b85';ctx.fill();
+    ctx.fillStyle='#ffdf32';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='900 25px Arial,sans-serif';ctx.fillText('?',qx+44,qy+4);
     ctx.fillStyle='#102b65';ctx.textAlign='left';ctx.textBaseline='middle';
-    ctx.font='900 29px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif';
-    ctx.fillText('आज का गणित प्रश्न',qx+78,qy+5,285);
-    const question=fitLines(ctx,currentQuestion.question_text,qw-60,3,43,30);
+    ctx.font='900 27px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif';ctx.fillText('आज का गणित प्रश्न',qx+74,qy+4,270);
+    const question=fitLines(ctx,currentQuestion.question_text,qw-56,3,40,27);
     ctx.font=`800 ${question.size}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
     ctx.fillStyle='#101d52';ctx.textAlign='center';ctx.textBaseline='middle';
-    const lineGap=8,qTotal=question.lines.length*(question.size+lineGap)-lineGap;
-    const qStart=qy+78+(qh-90-qTotal)/2;
-    question.lines.forEach((line,i)=>ctx.fillText(line,qx+qw/2,qStart+i*(question.size+lineGap),qw-52));
+    const lineGap=6,qTotal=question.lines.length*(question.size+lineGap)-lineGap;
+    const qStart=qy+66+(qh-76-qTotal)/2;
+    question.lines.forEach((line,i)=>ctx.fillText(line,qx+qw/2,qStart+i*(question.size+lineGap),qw-48));
 
     const options=[
-      {label:'A',text:currentQuestion.option_a,x:92,y:525,color:'#0878ed',bg:'#e8f4ff'},
-      {label:'B',text:currentQuestion.option_b,x:490,y:525,color:'#ed1680',bg:'#fff0f7'},
-      {label:'C',text:currentQuestion.option_c,x:92,y:635,color:'#0b9b78',bg:'#e8fbf3'},
-      {label:'D',text:currentQuestion.option_d,x:490,y:635,color:'#f26b13',bg:'#fff4e7'}
+      {label:'A',text:currentQuestion.option_a,x:244,y:492,color:'#0878ed',bg:'#e8f4ff'},
+      {label:'B',text:currentQuestion.option_b,x:636,y:492,color:'#ed1680',bg:'#fff0f7'},
+      {label:'C',text:currentQuestion.option_c,x:244,y:590,color:'#0b9b78',bg:'#e8fbf3'},
+      {label:'D',text:currentQuestion.option_d,x:636,y:590,color:'#f26b13',bg:'#fff4e7'}
     ];
     for(const o of options){
-      const ox=o.x,oy=o.y,ow=359,oh=91;
-      ctx.save();ctx.shadowColor='rgba(13,48,91,.12)';ctx.shadowBlur=7;ctx.shadowOffsetY=3;
-      roundedRect(ctx,ox,oy,ow,oh,22);ctx.fillStyle=o.bg;ctx.fill();ctx.restore();
-      ctx.lineWidth=3;ctx.strokeStyle=o.color;roundedRect(ctx,ox,oy,ow,oh,22);ctx.stroke();
-      ctx.beginPath();ctx.arc(ox+47,oy+oh/2,31,0,Math.PI*2);ctx.fillStyle=o.color;ctx.fill();
-      ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='800 40px Arial,sans-serif';ctx.fillText(o.label,ox+47,oy+oh/2+1);
-      const val=fitLines(ctx,String(o.text||''),ow-100,2,44,30);
+      const ox=o.x,oy=o.y,ow=365,oh=82;
+      ctx.save();ctx.shadowColor='rgba(13,48,91,.12)';ctx.shadowBlur=6;ctx.shadowOffsetY=3;
+      roundedRect(ctx,ox,oy,ow,oh,20);ctx.fillStyle=o.bg;ctx.fill();ctx.restore();
+      ctx.lineWidth=3;ctx.strokeStyle=o.color;roundedRect(ctx,ox,oy,ow,oh,20);ctx.stroke();
+      ctx.beginPath();ctx.arc(ox+43,oy+oh/2,29,0,Math.PI*2);ctx.fillStyle=o.color;ctx.fill();
+      ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='800 37px Arial,sans-serif';ctx.fillText(o.label,ox+43,oy+oh/2+1);
+      const val=fitLines(ctx,String(o.text||''),ow-92,2,39,27);
       ctx.textAlign='left';ctx.textBaseline='middle';ctx.font=`800 ${val.size}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;ctx.fillStyle='#101d52';
-      val.lines.forEach((line,i)=>{
-        const lineOffset=(i-(val.lines.length-1)/2)*(val.size+3);
-        ctx.fillText(line,ox+92,oy+oh/2+lineOffset,ow-105);
-      });
+      val.lines.forEach((line,i)=>{const lineOffset=(i-(val.lines.length-1)/2)*(val.size+3);ctx.fillText(line,ox+84,oy+oh/2+lineOffset,ow-96);});
     }
-
-    const cx=390,cy=815,cw=465,ch=132;
-    ctx.save();ctx.shadowColor='rgba(13,48,91,.22)';ctx.shadowBlur=11;ctx.shadowOffsetY=4;
-    roundedRect(ctx,cx,cy,cw,ch,24);ctx.fillStyle='#123b85';ctx.fill();ctx.restore();
-    ctx.lineWidth=4;ctx.strokeStyle='#ffcf28';roundedRect(ctx,cx,cy,cw,ch,24);ctx.stroke();
-    ctx.beginPath();ctx.arc(cx+49,cy+ch/2,34,0,Math.PI*2);ctx.fillStyle='#ffdf32';ctx.fill();
-    ctx.fillStyle='#123b85';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='900 26px Arial,sans-serif';ctx.fillText('•••',cx+49,cy+ch/2);
-    ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.font='900 33px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif';ctx.fillText('अपना उत्तर',cx+282,cy+48,cw-130);
-    ctx.fillStyle='#ffdf32';ctx.font='900 33px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif';ctx.fillText('कमेंट में लिखें',cx+282,cy+91,cw-130);
-
+    // CTA is kept on the lower-right area so it does not cover the teacher.
+    const cx=558,cy=700,cw=420,ch=118;
+    ctx.save();ctx.shadowColor='rgba(13,48,91,.22)';ctx.shadowBlur=10;ctx.shadowOffsetY=4;
+    roundedRect(ctx,cx,cy,cw,ch,22);ctx.fillStyle='#123b85';ctx.fill();ctx.restore();
+    ctx.lineWidth=4;ctx.strokeStyle='#ffcf28';roundedRect(ctx,cx,cy,cw,ch,22);ctx.stroke();
+    ctx.beginPath();ctx.arc(cx+48,cy+ch/2,31,0,Math.PI*2);ctx.fillStyle='#ffdf32';ctx.fill();
+    ctx.fillStyle='#123b85';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='900 24px Arial,sans-serif';ctx.fillText('•••',cx+48,cy+ch/2);
+    ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='900 29px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif';ctx.fillText('अपना उत्तर',cx+260,cy+43,cw-120);
+    ctx.fillStyle='#ffdf32';ctx.font='900 29px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif';ctx.fillText('कमेंट में लिखें',cx+260,cy+82,cw-120);
     ctx.restore();
-
     generatedImageData=c.toDataURL('image/png');
     generatedImageUrl='';
     if($('imagePreview'))$('imagePreview').src=generatedImageData;
     if($('imagePreviewWrap'))$('imagePreviewWrap').hidden=false;
-    if($('imageStatus'))$('imageStatus').textContent='1440×1800 PNG • पूरा Master Template सुरक्षित • 4:5 Image Post';
+    if($('imageStatus'))$('imageStatus').textContent='1440×1800 PNG • नया खाली Master Template • 4:5 Image Post';
     updatePublishAvailability();renderPlatformPreviews();saveActiveTypeState();
-    msg('Image Post 1440×1800 (4:5) में तैयार है। पूरा Master Template बिना crop/stretch के रखा गया है।','success');
+    msg('Image Post नए खाली 4:5 Master Template पर तैयार है।','success');
   }catch(e){
     console.error('[Ganit Setu] Image layout error',e);
     msg(`Question Image नहीं बन पाई: ${e.message||'कृपया template और question data जाँचें।'}`,'error');
-  }finally{
-    btn.disabled=false;
-    btn.textContent='🖼️ Template में Question डालें';
-  }
+  }finally{btn.disabled=false;btn.textContent='🖼️ Template में Question डालें';}
 }
 
   const SCENE_IMAGE_FILES = [
