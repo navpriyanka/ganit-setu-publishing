@@ -193,6 +193,22 @@ Ganit Setu — MP Board Mathematics Learning`,
     if(generatedImageData&&!mediaUrl){const up=await uploadFile(dataUrlToFile(generatedImageData,`Q${currentQuestion.id}_GANIT_SETU.jpg`),'images',currentQuestion.id);mediaUrl=generatedImageUrl=up.url;}
     return {id:crypto.randomUUID(),question_id:(currentType==='post'? (platform==='facebook'?currentQuestion.id:Number(currentQuestion.id)) : currentQuestion.id),class_level:Number(currentQuestion.class_level),chapter_number:Number(currentQuestion.chapter_number),chapter_name:currentQuestion.chapter_name||'',platform,content_type:currentType,content,draft:content.post||content.caption||'',media_url:mediaUrl||'',video_url:videoUrl||'',created_at:new Date().toISOString(),status:'saved'};
   }
+  // YouTube Community only: add a safe border so the top Ganit Setu branding is not clipped in previews.
+  // Other platforms continue using the original generatedImageData unchanged.
+  async function makeYouTubeSafeImage(){
+    const src=generatedImageData||generatedImageUrl;
+    if(!src) throw new Error('YouTube के लिए Image Post पहले generate करें।');
+    const im=await loadImg(src);
+    const W=1080,H=1350,SAFE=48; // 4:5 output with a safe margin on all four sides
+    const c=document.createElement('canvas');c.width=W;c.height=H;
+    const ctx=c.getContext('2d');
+    ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,H);
+    const scale=Math.min((W-SAFE*2)/im.naturalWidth,(H-SAFE*2)/im.naturalHeight);
+    const dw=Math.round(im.naturalWidth*scale),dh=Math.round(im.naturalHeight*scale);
+    ctx.drawImage(im,Math.round((W-dw)/2),Math.round((H-dh)/2),dw,dh);
+    return c.toDataURL('image/png');
+  }
+
   async function publishOnePlatform(platform){
     const btn=document.querySelector(`[data-publish-platform="${platform}"]`);
     const originalLabel=btn?.textContent||'🚀 Publish';
@@ -216,7 +232,9 @@ Ganit Setu — MP Board Mathematics Learning`,
         // Open synchronously on the user click so popup blockers are less likely to stop it.
         window.open('https://whatsapp.com/channel/0029VbDLOBHICVfrePXZ363D','_blank','noopener');
         if(currentType==='image'&&(generatedImageData||generatedImageUrl)){
-          const a=document.createElement('a');a.href=generatedImageData||generatedImageUrl;a.download=`GANIT_SETU_Q${currentQuestion?.id||'image'}.png`;a.target='_blank';document.body.appendChild(a);a.click();a.remove();
+          // Use a YouTube-only safe-margin copy. Keep the shared image untouched for Facebook/Instagram/WhatsApp.
+          const youtubeImage=await makeYouTubeSafeImage();
+          const a=document.createElement('a');a.href=youtubeImage;a.download=`GANIT_SETU_YOUTUBE_Q${currentQuestion?.id||'image'}_1080x1350.png`;document.body.appendChild(a);a.click();a.remove();
         }
         try{
           await copyPromise;
