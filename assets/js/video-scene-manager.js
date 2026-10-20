@@ -1089,6 +1089,12 @@ async function buildFinalPreview(){
     for(let n=1;n<=5;n++){
       await ffmpeg.writeFile(`scene-${n}.png`,await fetchFile(imagePublicUrl(imageRowsByScene[n].storage_path)));
     }
+    // Transition cards are static project assets, separate from generated question images.
+    const transitionFiles=['transition-1-options.png','transition-2-hint.png','transition-3-answer.png','transition-4-follow.png'];
+    for(const name of transitionFiles){
+      const assetUrl=new URL(`assets/images/transitions/${name}`,location.href).href;
+      await ffmpeg.writeFile(name,await fetchFile(assetUrl));
+    }
 
     const filters=[
       '[0:v]scale=1080:1920,setsar=1,split=2[base][gapbase]',
@@ -1108,10 +1114,20 @@ async function buildFinalPreview(){
       // Then restore the untouched Canva master ONLY in the 1-sec indicator gaps,
       // so the middle indicator images remain fully visible.
       '[v5]fade=t=in:st=0:d=0.25,fade=t=out:st=7.75:d=0.25,fade=t=in:st=9:d=0.25,fade=t=out:st=16.75:d=0.25,fade=t=in:st=18:d=0.25,fade=t=out:st=25.75:d=0.25,fade=t=in:st=27:d=0.25,fade=t=out:st=34.75:d=0.25,fade=t=in:st=36:d=0.25,fade=t=out:st=44.75:d=0.25[vfaded]',
-      '[vfaded][gapbase]overlay=0:0:eof_action=repeat:shortest=0:enable=\'gte(t,8)*lt(t,9)+gte(t,17)*lt(t,18)+gte(t,26)*lt(t,27)+gte(t,35)*lt(t,36)\'[vout]'
+      // Restore the master video in the four 1-second gaps, then show the
+      // supplied transition card over each gap with a short alpha fade.
+      '[vfaded][gapbase]overlay=0:0:eof_action=repeat:shortest=0:enable=\'gte(t,8)*lt(t,9)+gte(t,17)*lt(t,18)+gte(t,26)*lt(t,27)+gte(t,35)*lt(t,36)\'[vbase]',
+      '[6:v]scale=1080:1920,format=rgba,fade=t=in:st=0:d=0.15:alpha=1,fade=t=out:st=0.85:d=0.15:alpha=1[t1]',
+      '[7:v]scale=1080:1920,format=rgba,fade=t=in:st=0:d=0.15:alpha=1,fade=t=out:st=0.85:d=0.15:alpha=1[t2]',
+      '[8:v]scale=1080:1920,format=rgba,fade=t=in:st=0:d=0.15:alpha=1,fade=t=out:st=0.85:d=0.15:alpha=1[t3]',
+      '[9:v]scale=1080:1920,format=rgba,fade=t=in:st=0:d=0.15:alpha=1,fade=t=out:st=0.85:d=0.15:alpha=1[t4]',
+      '[vbase][t1]overlay=0:0:eof_action=repeat:shortest=0:enable=\'gte(t,8)*lt(t,9)\'[vt1]',
+      '[vt1][t2]overlay=0:0:eof_action=repeat:shortest=0:enable=\'gte(t,17)*lt(t,18)\'[vt2]',
+      '[vt2][t3]overlay=0:0:eof_action=repeat:shortest=0:enable=\'gte(t,26)*lt(t,27)\'[vt3]',
+      '[vt3][t4]overlay=0:0:eof_action=repeat:shortest=0:enable=\'gte(t,35)*lt(t,36)\'[vout]'
     ].join(';');
 
-    status.textContent='⏳ Original 45-sec video पर 5 Scene images overlay हो रही हैं…';
+    status.textContent='⏳ Original video पर 5 Scene images और 4 transition cards overlay हो रहे हैं…';
     await Promise.race([
       ffmpeg.exec([
         '-i','master.mp4',
@@ -1120,6 +1136,10 @@ async function buildFinalPreview(){
         '-loop','1','-i','scene-3.png',
         '-loop','1','-i','scene-4.png',
         '-loop','1','-i','scene-5.png',
+        '-loop','1','-i','transition-1-options.png',
+        '-loop','1','-i','transition-2-hint.png',
+        '-loop','1','-i','transition-3-answer.png',
+        '-loop','1','-i','transition-4-follow.png',
         '-filter_complex',filters,
         '-map','[vout]',
         '-map','0:a?',
@@ -1155,7 +1175,7 @@ async function buildFinalPreview(){
     downloadBtn.dataset.url=verifyUrl;
     downloadBtn.dataset.single='1';
     document.getElementById('publishFinalBtn').disabled=false;
-    status.textContent='✅ पूरा 45-sec Final MP4 तैयार और Supabase में सुरक्षित है।';
+    status.textContent='✅ पूरा Final MP4 (5 scenes + 4 transition cards) तैयार और Supabase में सुरक्षित है।';
 
     try{ffmpeg.terminate();}catch(_){ }
   }catch(e){
