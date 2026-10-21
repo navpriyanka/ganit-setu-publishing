@@ -37,36 +37,33 @@ async function load(){
    }
    return found;
   }
-  // Explicitly walk only approved temporary folders. Do not scan/delete templates or logos.
+  // List the bucket root first, then the approved folders. This also exposes
+  // path/project mismatches instead of silently showing zero files.
+  async function listFolder(path){
+   const attempts = path ? [path, path + '/'] : [''];
+   let last = {data:[], error:null};
+   for (const p of attempts) {
+    const result = await sb.storage.from(bucket).list(p,{limit:100,sortBy:{column:'created_at',order:'desc'}});
+    if (result.error) throw result.error;
+    last = result;
+    if ((result.data||[]).length) return result;
+   }
+   return last;
+  }
+  const root = await listFolder('');
+  const rootNames = (root.data||[]).map(x=>x.name);
   const [images,videos,youtube]=await Promise.all([
-   sb.storage.from(bucket).list('content-packages/images',{limit:100,sortBy:{column:'created_at',order:'desc'}}),
-   sb.storage.from(bucket).list('video-scenes/questions',{limit:100,sortBy:{column:'created_at',order:'desc'}}),
-   sb.storage.from(bucket).list('content-packages/youtube',{limit:100,sortBy:{column:'created_at',order:'desc'}})
+   listFolder('content-packages/images'),
+   listFolder('video-scenes/questions'),
+   listFolder('content-packages/youtube')
   ]);
+  console.log('Media Manager bucket root entries:', rootNames);
+  console.log('Media Manager image entries:', (images.data||[]).map(x=>({name:x.name,id:x.id,metadata:x.metadata})));
   for(const res of [images,videos,youtube])if(res.error)throw res.error;
-  console.log('IMAGE COUNT:', images.data?.length);
-console.log('IMAGE FILE NAMES:', (images.data || []).map(x => x.name));
-console.log('IMAGE ERROR:', images.error);
-  console.log('Image storage response:', images);
-  console.log('IMAGE COUNT:', images.data?.length);
-console.log('IMAGE FILE NAMES:', (images.data || []).map(x => x.name));
-console.log('IMAGE ERROR:', images.error);
-console.log('Video storage response:', videos);
-console.log('YouTube storage response:', youtube);
- for (const x of images.data || []) {
-  if (!x.name) continue;
-
-  // इस पाथ में केवल वास्तविक फाइलें सूचीबद्ध करें।
-  if (x.id == null && !x.metadata) continue;
-
-  items.images.push({
-    name: x.name,
-    path: 'content-packages/images/' + x.name,
-    created_at: x.created_at || x.updated_at || '',
-    size: Number(x.metadata?.size || 0),
-    type: 'images'
-  });
-}
+  for (const x of images.data || []) {
+   if (!x.name || (x.id == null && !x.metadata)) continue;
+   items.images.push({name:x.name,path:'content-packages/images/'+x.name,created_at:x.created_at||x.updated_at||'',size:Number(x.metadata?.size||0),type:'images'});
+  }
   for(const x of youtube.data||[])if(x.id!==null || x.metadata){const path='content-packages/youtube/'+x.name;const type=kind(path);if(type)items[type].push({name:x.name,path,created_at:x.created_at||x.updated_at||'',size:Number(x.metadata?.size||0),type});}
   // Only inspect immediate folders under video-scenes/questions, then final folder of each question.
   for(const q of videos.data||[]){
