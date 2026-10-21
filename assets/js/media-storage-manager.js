@@ -37,33 +37,29 @@ async function load(){
    }
    return found;
   }
-  // List the bucket root first, then the approved folders. This also exposes
-  // path/project mismatches instead of silently showing zero files.
-  async function listFolder(path){
-   const attempts = path ? [path, path + '/'] : [''];
-   let last = {data:[], error:null};
-   for (const p of attempts) {
-    const result = await sb.storage.from(bucket).list(p,{limit:100,sortBy:{column:'created_at',order:'desc'}});
-    if (result.error) throw result.error;
-    last = result;
-    if ((result.data||[]).length) return result;
-   }
-   return last;
-  }
-  const root = await listFolder('');
-  const rootNames = (root.data||[]).map(x=>x.name);
+  // Explicitly walk only approved temporary folders. Do not scan/delete templates or logos.
   const [images,videos,youtube]=await Promise.all([
-   listFolder('content-packages/images'),
-   listFolder('video-scenes/questions'),
-   listFolder('content-packages/youtube')
+   sb.storage.from(bucket).list('content-packages/images',{limit:100,sortBy:{column:'created_at',order:'desc'}}),
+   sb.storage.from(bucket).list('video-scenes/questions',{limit:100,sortBy:{column:'created_at',order:'desc'}}),
+   sb.storage.from(bucket).list('content-packages/youtube',{limit:100,sortBy:{column:'created_at',order:'desc'}})
   ]);
-  console.log('Media Manager bucket root entries:', rootNames);
-  console.log('Media Manager image entries:', (images.data||[]).map(x=>({name:x.name,id:x.id,metadata:x.metadata})));
   for(const res of [images,videos,youtube])if(res.error)throw res.error;
-  for (const x of images.data || []) {
-   if (!x.name || (x.id == null && !x.metadata)) continue;
-   items.images.push({name:x.name,path:'content-packages/images/'+x.name,created_at:x.created_at||x.updated_at||'',size:Number(x.metadata?.size||0),type:'images'});
-  }
+ for (const x of images.data || []) {
+  const name = String(x.name || '');
+  // Supabase may return this internal placeholder for an empty folder.
+  // It is not a real image and must never appear in the count or delete list.
+  if (!name || name === '.emptyFolderPlaceholder' || name.startsWith('.')) continue;
+  if (x.id == null && !x.metadata) continue;
+  if (!/\.(png|jpe?g|webp|gif|avif)$/i.test(name)) continue;
+
+  items.images.push({
+    name,
+    path: 'content-packages/images/' + name,
+    created_at: x.created_at || x.updated_at || '',
+    size: Number(x.metadata?.size || 0),
+    type: 'images'
+  });
+}
   for(const x of youtube.data||[])if(x.id!==null || x.metadata){const path='content-packages/youtube/'+x.name;const type=kind(path);if(type)items[type].push({name:x.name,path,created_at:x.created_at||x.updated_at||'',size:Number(x.metadata?.size||0),type});}
   // Only inspect immediate folders under video-scenes/questions, then final folder of each question.
   for(const q of videos.data||[]){
