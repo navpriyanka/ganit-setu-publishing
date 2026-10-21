@@ -44,6 +44,9 @@ async function load(){
   ]);
   for(const res of [images,videos,youtube])if(res.error)throw res.error;
   console.log('Image storage response:', images);
+  console.log('IMAGE COUNT:', images.data?.length);
+console.log('IMAGE FILE NAMES:', (images.data || []).map(x => x.name));
+console.log('IMAGE ERROR:', images.error);
 console.log('Video storage response:', videos);
 console.log('YouTube storage response:', youtube);
  for (const x of images.data || []) {
