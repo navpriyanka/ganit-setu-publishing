@@ -43,7 +43,20 @@ async function load(){
    sb.storage.from(bucket).list('content-packages/youtube',{limit:100,sortBy:{column:'created_at',order:'desc'}})
   ]);
   for(const res of [images,videos,youtube])if(res.error)throw res.error;
-  for(const x of images.data||[])if(x.id!==null || x.metadata)items.images.push({name:x.name,path:'content-packages/images/'+x.name,created_at:x.created_at||x.updated_at||'',size:Number(x.metadata?.size||0),type:'images'});
+ for (const x of images.data || []) {
+  if (!x.name) continue;
+
+  // इस पाथ में केवल वास्तविक फाइलें सूचीबद्ध करें।
+  if (x.id == null && !x.metadata) continue;
+
+  items.images.push({
+    name: x.name,
+    path: 'content-packages/images/' + x.name,
+    created_at: x.created_at || x.updated_at || '',
+    size: Number(x.metadata?.size || 0),
+    type: 'images'
+  });
+}
   for(const x of youtube.data||[])if(x.id!==null || x.metadata){const path='content-packages/youtube/'+x.name;const type=kind(path);if(type)items[type].push({name:x.name,path,created_at:x.created_at||x.updated_at||'',size:Number(x.metadata?.size||0),type});}
   // Only inspect immediate folders under video-scenes/questions, then final folder of each question.
   for(const q of videos.data||[]){
