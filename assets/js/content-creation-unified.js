@@ -705,25 +705,37 @@ Ganit Setu — MP Board Mathematics Learning`,
       ];
       const generated=[];
       for(let i=0;i<5;i++){
+        // Use the corresponding scene image only to obtain canvas dimensions.
+        // IMPORTANT: do NOT draw the uploaded/static template into this PNG.
+        // This PNG is a transparent overlay and will sit above the VIDEO scene.
         const img=await loadImg(SCENE_IMAGE_FILES[i]);
         const W=img.naturalWidth||1080,H=img.naturalHeight||1920;
-        const c=document.createElement('canvas');c.width=W;c.height=H;const ctx=c.getContext('2d');
-        ctx.drawImage(img,0,0,W,H);drawScenePanel(ctx,scenes[i].lines,W,H,i+1);
-        const data=c.toDataURL('image/png');generated.push({title:scenes[i].title,data,name:`GANIT_SETU_Q${q.id}_scene-${i+1}.png`});
-        // Show this question image beside its matching video scene in the same sequence.
-        const sequencePreview=$(`ccTplPreviewImage${i+1}`)||document.querySelector(`#ccVideoTemplateGrid article:nth-child(${i+1}) .cc-scene-image-preview`);
-        if(sequencePreview){sequencePreview.src=data;sequencePreview.alt=`${scenes[i].title} — generated question image`;sequencePreview.dataset.generatedQuestionImage='true';}
+        const c=document.createElement('canvas');c.width=W;c.height=H;
+        const ctx=c.getContext('2d');
+        ctx.clearRect(0,0,W,H);
+        drawScenePanel(ctx,scenes[i].lines,W,H,i+1);
+        const data=c.toDataURL('image/png');
+        generated.push({title:scenes[i].title,data,name:`GANIT_SETU_Q${q.id}_scene-${i+1}-overlay.png`,sceneNo:i+1});
       }
       results.innerHTML='';
       generated.forEach((item)=>{
         const card=document.createElement('article');card.className='cc-generated-scene-card';
         const title=document.createElement('b');title.textContent=item.title;
-        const preview=document.createElement('img');preview.src=item.data;preview.alt=item.title;
-        const download=document.createElement('button');download.type='button';download.className='btn ghost';download.textContent='⬇️ PNG डाउनलोड';
+        const composite=document.createElement('div');composite.className='cc-scene-composite-preview';
+        const video=document.createElement('video');
+        video.src=`assets/videos/video-templates/scene-${item.sceneNo}.mp4`;
+        video.controls=true;video.playsInline=true;video.preload='metadata';
+        video.setAttribute('aria-label',`${item.title} video template`);
+        const overlay=document.createElement('img');overlay.src=item.data;overlay.alt=`${item.title} transparent question overlay`;
+        overlay.className='cc-scene-overlay-layer';
+        composite.append(video,overlay);
+        const note=document.createElement('small');note.className='cc-overlay-note';
+        note.textContent='पारदर्शी प्रश्न-इमेज वीडियो सीन के ऊपर दिखाई गई है; मूल टेम्पलेट नहीं बदला गया।';
+        const download=document.createElement('button');download.type='button';download.className='btn ghost';download.textContent='⬇️ Transparent Overlay PNG डाउनलोड';
         download.addEventListener('click',()=>{const a=document.createElement('a');a.href=item.data;a.download=item.name;document.body.appendChild(a);a.click();a.remove();});
-        card.append(title,preview,download);results.appendChild(card);
+        card.append(title,composite,note,download);results.appendChild(card);
       });
-      status.textContent=`✅ Q${q.id} के लिए पाँचों PNG तैयार हैं और हर Scene के छोटे Preview में लग गई हैं। नीचे से PNG अलग डाउनलोड भी कर सकते हैं।`;
+      status.textContent=`✅ Q${q.id} के लिए पाँचों transparent overlays तैयार हैं और संबंधित video scenes के ऊपर preview में दिख रहे हैं।`;
       msg('पाँचों Scene Images इसी पेज पर बन गई हैं।','success');
     }catch(e){console.error('[Ganit Setu] Five-scene image generation failed',e);status.textContent='इमेज नहीं बन पाईं: '+(e.message||'टेम्पलेट फाइल जाँचें।');msg('Scene Images नहीं बन पाईं: '+(e.message||e),'error');}
     finally{btn.disabled=false;btn.textContent='✨ पाँचों Scene Images बनाएं';}
