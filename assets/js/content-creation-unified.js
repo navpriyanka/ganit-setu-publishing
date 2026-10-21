@@ -20,75 +20,6 @@
   function switchContentType(nextType){if(nextType===currentType)return;saveActiveTypeState();currentType=nextType;restoreTypeState(currentType);updateState();}
   function msg(t,kind='info'){const e=$('ccNotice');if(e){e.textContent=t;e.className='notice '+kind;e.hidden=false;setTimeout(()=>e.hidden=true,5000)}}
   async function session(){const {data,error}=await sb.auth.getSession();if(error)throw error;if(!data?.session?.access_token)throw new Error('Admin session उपलब्ध नहीं है। कृपया Admin Panel में login करें।');return data.session.access_token}
-  // Temporary-media cleanup is requested only after a publishing API confirms success.
-  // The cleanup Edge Function must independently authorize this authenticated request.
-  function storagePathFromPublicUrl(value){
-    if(!value)return '';
-    try{
-      const u=new URL(value,window.location.href);
-      const marker='/storage/v1/object/public/content-media/';
-      const at=u.pathname.indexOf(marker);
-      if(at<0)return '';
-      return decodeURIComponent(u.pathname.slice(at+marker.length)).replace(/^\/+/, '');
-    }catch(e){return '';}
-  }
-  function approvedTemporaryMediaPath(path){
-    if(!path)return false;
-    if(path.startsWith('content-packages/images/'))return true;
-    if(path.startsWith('content-packages/youtube/'))return true;
-    return /^video-scenes\/questions\/[^/]+\/final\/question-[^/]+-final\.mp4$/.test(path);
-  }
-  async function requestTemporaryMediaCleanup(path){
-    if(!approvedTemporaryMediaPath(path))return {ok:false,skipped:true,reason:'Not an approved temporary media path'};
-    const token=await session();
-    const response=await fetch(SUPABASE_URL+'/functions/v1/cleanup-temporary-media',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token,'apikey':ANON},
-      body:JSON.stringify({action:'delete_after_publish',storage_path:path,publish_confirmed:true})
-    });
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok||data.ok!==true)throw new Error(data.error||('Cleanup request failed ('+response.status+')'));
-    return data;
-  }
-  const cleanupSuccessKey='gsTemporaryMediaPublishSuccess_v1';
-  function recordMediaPublishSuccess(path,platform,contentType){
-    if(!approvedTemporaryMediaPath(path))return null;
-    let state={};try{state=JSON.parse(localStorage.getItem(cleanupSuccessKey)||'{}')}catch(e){state={}}
-    const key=path;
-    const entry=state[key]||{platforms:[],contentType:contentType||''};
-    if(!entry.platforms.includes(platform))entry.platforms.push(platform);
-    entry.contentType=contentType||entry.contentType;
-    state[key]=entry;
-    try{localStorage.setItem(cleanupSuccessKey,JSON.stringify(state))}catch(e){}
-    // Shared image/video media is retained until every supported automatic destination
-    // for that content type has reported API success. Manual destinations never count.
-    const required=entry.contentType==='image'?['facebook','instagram']:
-      (entry.contentType==='reel'||entry.contentType==='short'?['facebook','instagram','youtube']:['facebook']);
-    if(!required.every(p=>entry.platforms.includes(p)))return {pending:true,required,completed:entry.platforms};
-    return {ready:true,key};
-  }
-  async function cleanupAfterPublishSuccess(pkg,result,platform){
-    if(result?.manual)return;
-    // YouTube uploads a separate temporary copy; clean that copy only after API success.
-    const uniqueYouTubePath=result?.cleanup_storage_path||'';
-    if(platform==='youtube'&&uniqueYouTubePath&&approvedTemporaryMediaPath(uniqueYouTubePath)){
-      try{await requestTemporaryMediaCleanup(uniqueYouTubePath)}catch(e){console.warn('[Ganit Setu] YouTube temporary copy cleanup was not completed:',e.message||e)}
-      return;
-    }
-    const path=storagePathFromPublicUrl(pkg?.media_url||pkg?.video_url||'');
-    if(!approvedTemporaryMediaPath(path))return;
-    const state=recordMediaPublishSuccess(path,platform,pkg?.content_type);
-    if(!state?.ready)return;
-    try{
-      const cleanup=await requestTemporaryMediaCleanup(path);
-      if(cleanup.deleted){
-        const saved=JSON.parse(localStorage.getItem(cleanupSuccessKey)||'{}');delete saved[path];localStorage.setItem(cleanupSuccessKey,JSON.stringify(saved));
-        console.info('[Ganit Setu] Temporary media deleted after confirmed publish:',path);
-      }else{
-        console.info('[Ganit Setu] Temporary media retained:',cleanup.reason||cleanup.message||'cleanup did not delete');
-      }
-    }catch(e){console.warn('[Ganit Setu] Temporary media cleanup request failed; media retained:',e.message||e)}
-  }
   function qCaption(q){return ['📘 GANIT SETU',`कक्षा ${q.class_level} | अध्याय ${q.chapter_number} — ${q.chapter_name||''}`,'','🧮 आज का गणित प्रश्न:',q.question_text,'',`A) ${q.option_a}`,`B) ${q.option_b}`,`C) ${q.option_c}`,`D) ${q.option_d}`,'','🤔 आपका उत्तर क्या है? Comment करके बताइए!','','#GanitSetu #MPBoard #Mathematics #MathsQuestion #Class'+q.class_level].join('\n')}
   // Image Post captions are anchored to the exact question used to render the image.
   // Keep hashtags ASCII-only to avoid broken Devanagari hashtags on social platforms.
@@ -718,6 +649,60 @@ Ganit Setu — MP Board Mathematics Learning`,
 
   function dataUrlToFile(dataUrl,name='ganit-setu-question.jpg'){const [meta,b64]=dataUrl.split(',');const bin=atob(b64);const arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);return new File([arr],name,{type:(meta.match(/data:(.*?);/)||[])[1]||'image/jpeg'})}
   async function uploadFile(file,folder,qid){const safe=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');const path=`content-packages/${folder}/${Date.now()}-Q${qid}-${safe}`;const {error}=await sb.storage.from('content-media').upload(path,file,{upsert:false,contentType:file.type||undefined,cacheControl:'3600'});if(error)throw new Error(`Asset upload failed: ${error.message}`);return {path,url:sb.storage.from('content-media').getPublicUrl(path).data.publicUrl}}
+  // Cleanup helper: call only after the publishing API confirms success.
+  // Never place CLEANUP_SECRET in browser code. The Edge Function must validate
+  // the logged-in admin JWT and perform storage deletion server-side.
+  async function requestTemporaryMediaCleanup(storagePath){
+    if(!storagePath || typeof storagePath!=='string') return {ok:false, skipped:true, reason:'No storage path'};
+    const token=await session();
+    const response=await fetch(SUPABASE_URL+'/functions/v1/cleanup-temporary-media',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token,'apikey':ANON},
+      body:JSON.stringify({action:'delete_after_publish',storage_path:storagePath,publish_confirmed:true})
+    });
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok || data.ok!==true) throw new Error(data.error||('Cleanup request failed ('+response.status+')'));
+    return data;
+  }
+  function storagePathFromPublicUrl(url){
+    if(!url)return '';
+    try{
+      const parsed=new URL(url,window.location.href);
+      const marker='/storage/v1/object/public/content-media/';
+      const index=parsed.pathname.indexOf(marker);
+      if(index<0)return '';
+      return decodeURIComponent(parsed.pathname.slice(index+marker.length)).replace(/^\/+/, '');
+    }catch(e){return '';}
+  }
+  function isApprovedTemporaryMediaPath(path){
+    if(!path)return false;
+    if(/^content-packages\/images\/[^/]+$/.test(path))return true;
+    if(/^content-packages\/youtube\/[^/]+$/.test(path))return true;
+    return /^video-scenes\/questions\/[^/]+\/final\/question-[^/]+-final\.mp4$/.test(path);
+  }
+  async function cleanupTemporaryMediaAfterSuccess(storagePath){
+    if(!isApprovedTemporaryMediaPath(storagePath))return {ok:false,skipped:true,reason:'Path permanent/allowlist में नहीं है'};
+    try{
+      const result=await requestTemporaryMediaCleanup(storagePath);
+      if(result.deleted)console.info('[Ganit Setu] Temporary media deleted after confirmed publish:',storagePath);
+      else console.info('[Ganit Setu] Temporary media retained:',storagePath,result.reason||result.message||'cleanup ने delete नहीं किया');
+      return result;
+    }catch(error){
+      // Cleanup failure must never change a successful publish into a failed publish.
+      console.warn('[Ganit Setu] Publish सफल, लेकिन cleanup नहीं हुआ; media retry/expiry तक सुरक्षित रहेगा:',storagePath,error.message||error);
+      return {ok:false,error:error.message||String(error)};
+    }
+  }
+  async function cleanupAfterPublishSuccess(pkg,result,platform){
+    if(!result || result.manual)return;
+    // YouTube uses a separate temporary copy; do not delete the original source here.
+    if(platform==='youtube'&&result.cleanup_storage_path){
+      await cleanupTemporaryMediaAfterSuccess(result.cleanup_storage_path);
+      return;
+    }
+    const path=storagePathFromPublicUrl(pkg?.media_url||pkg?.video_url||'');
+    if(path)await cleanupTemporaryMediaAfterSuccess(path);
+  }
   function videoModal(){if(!currentQuestion)return msg('पहले Question generate करें।','error');$('videoFrame').src=`video-scene-manager.html?question_id=${encodeURIComponent(currentQuestion.id)}`;$('videoModal').hidden=false}
   function updatePublishAvailability(){const ready=!!currentQuestion;document.querySelectorAll('[data-publish-platform]').forEach(b=>b.disabled=!ready);}
   async function savePackage(){
@@ -781,7 +766,7 @@ Ganit Setu — MP Board Mathematics Learning`,
       const sourceUrl=pkg.video_url||pkg.media_url;const res=await fetch(sourceUrl);if(!res.ok)throw new Error('Final video load नहीं हुआ।');const blob=await res.blob();const file=new File([blob],`Q${question.id}.mp4`,{type:blob.type||'video/mp4'});const up=await uploadFile(file,'youtube',question.id);
       const tags=String(meta.keywords||'GanitSetu,MPBoard,Maths,Class'+question.class_level).split(/[,\s]+/).map(x=>x.trim()).filter(Boolean).slice(0,30);
       const r=await fetch(YOUTUBE_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`,'apikey':ANON},body:JSON.stringify({storage_bucket:'content-media',storage_path:up.path,title:meta.title,description:meta.description,tags,privacy_status:'private',question_id:pkg.question_id,plan_id:null,class_level:Number(question.class_level),publish_mode:'now'})});
-      const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.error||'YouTube publish failed');return {...d,cleanup_storage_path:up.path};
+      const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.error||'YouTube publish failed');return d;
     }
     if(pkg.platform==='whatsapp'){
       const text=[meta.title,meta.hook,meta.caption||meta.post,meta.cta,meta.hashtags].filter(Boolean).join('\n\n');
@@ -799,6 +784,8 @@ Ganit Setu — MP Board Mathematics Learning`,
     }catch(e){return msg('Image upload नहीं हुई: '+e.message,'error')}
     const platforms=allowedPlatforms();
     const results=[];
+    const successfulMediaPublishes=[];
+    let mediaPublishFailed=false;
     for(const platform of platforms){
       const v=variants[platform]&&typeof variants[platform]==='object'?variants[platform]:base;
       const content={...base,...v,platform_packages:undefined};
@@ -808,8 +795,19 @@ Ganit Setu — MP Board Mathematics Learning`,
       if(platform==='youtube'&&(currentType==='post'||!pkg.video_url)){results.push('YouTube: इस content type के लिए API publish उपलब्ध/तैयार नहीं; Preview only');continue}
       if(platform==='instagram'&&!pkg.media_url&&!pkg.video_url){results.push('Instagram: Image/Video नहीं है, इसलिए publish नहीं किया');continue}
       if(platform==='whatsapp'){try{await navigator.clipboard?.writeText([content.title,content.hook,content.caption||content.post,content.cta,content.hashtags].filter(Boolean).join('\n\n'))}catch(e){}results.push('WhatsApp: कॉपी/मैन्युअल शेयर आवश्यक; publish नहीं माना गया');continue}
-      try{const result=await publishPackage(pkg);await cleanupAfterPublishSuccess(pkg,result,platform);results.push(platform+': सफल'+(result?.external_url?' — '+result.external_url:''))}
-      catch(e){results.push(platform+': असफल — '+(e.message||e))}
+      try{
+        const result=await publishPackage(pkg);
+        if(result?.manual){results.push(platform+': मैन्युअल शेयर आवश्यक');continue;}
+        results.push(platform+': सफल'+(result?.external_url?' — '+result.external_url:''));
+        successfulMediaPublishes.push({pkg,result,platform});
+        if(platform==='youtube'&&result?.cleanup_storage_path)await cleanupAfterPublishSuccess(pkg,result,platform);
+      }catch(e){mediaPublishFailed=true;results.push(platform+': असफल — '+(e.message||e))}
+    }
+    // The same source image/video may be shared across multiple automatic destinations.
+    // Keep it until all automatic destinations attempted in this batch succeed.
+    if(!mediaPublishFailed&&successfulMediaPublishes.length){
+      const sourcePublish=successfulMediaPublishes.find(x=>x.platform!=='youtube'&&storagePathFromPublicUrl(x.pkg?.media_url||x.pkg?.video_url||''));
+      if(sourcePublish)await cleanupAfterPublishSuccess(sourcePublish.pkg,sourcePublish.result,sourcePublish.platform);
     }
     msg(results.join(' | '),results.some(x=>x.includes('असफल')||x.includes('नहीं बना')||x.includes('नहीं है'))?'error':'success');
   }
