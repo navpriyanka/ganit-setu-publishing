@@ -16,9 +16,19 @@
 <div class="ms-alert"><b>ध्यान दें:</b> Mark as Published दबाने पर चुनी गई temporary image/video को Supabase से हटाने का अनुरोध जाएगा। यह manual publishing की पुष्टि है—यह प्लेटफॉर्म पर पोस्ट होने की स्वतंत्र जाँच नहीं करता। स्थायी templates/logos को सूची में शामिल नहीं किया जाता।</div>
 <div class="ms-grid" style="margin-top:14px"><div class="ms-stat">🖼️ Temporary Images<strong id="imageCount">—</strong></div><div class="ms-stat">🎬 Temporary Videos<strong id="videoCount">—</strong></div><div class="ms-stat">💾 Listed Media<strong id="totalCount">—</strong></div></div>
 <p class="ms-muted">Text posts: इस ZIP में text-posts के लिए कोई सत्यापित database table/schema उपलब्ध नहीं है, इसलिए अभी वास्तविक text count यहाँ नहीं दिखाया जा सकता। Text section का मौजूदा Mark as Published बटन बना रहेगा।</p>
-<div class="ms-tabs"><button class="active" data-tab="images">🖼️ Images</button><button data-tab="videos">🎬 Videos</button></div>
+<div class="ms-tabs"><button class="active" data-tab="images">🖼️ Images</button><button data-tab="videos">🎬 Videos</button><button data-tab="texts">📝 Text Posts</button></div>
+<div class="ms-card" id="textPostsPanel" hidden>
+  <h2>📝 Text Posts</h2>
+  <p class="ms-muted">यहाँ Text Post drafts/records दिखाने के लिए मौजूदा database table/schema की पहचान करनी होगी। अभी ZIP में सत्यापित table नाम उपलब्ध नहीं है, इसलिए कोई नकली count नहीं दिखाया जाएगा।</p>
+  <div id="textPostsStatus">Text-post database integration अभी configure/test होना बाकी है।</div>
+  <button id="textPostsRefresh" class="ms-btn" type="button">↻ Refresh Text Status</button>
+</div>
 <div id="msStatus" class="ms-status" role="status">Supabase से सूची लोड की जा रही है…</div>
-<div id="mediaList" class="ms-card"></div><button id="refreshMedia" class="ms-btn">↻ Refresh Status</button>
+<div id="mediaList" class="ms-card"></div><div class="ms-row" id="bulkActions">
+<label><input type="checkbox" id="selectAllMedia"> इस सूची की सभी फाइलें चुनें</label>
+<button id="bulkMarkPublished" class="ms-btn" type="button">✅ Selected को Mark as Published</button>
+</div>
+<button id="refreshMedia" class="ms-btn">↻ Refresh Status</button>
 </div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
