@@ -710,6 +710,9 @@ Ganit Setu — MP Board Mathematics Learning`,
         const c=document.createElement('canvas');c.width=W;c.height=H;const ctx=c.getContext('2d');
         ctx.drawImage(img,0,0,W,H);drawScenePanel(ctx,scenes[i].lines,W,H,i+1);
         const data=c.toDataURL('image/png');generated.push({title:scenes[i].title,data,name:`GANIT_SETU_Q${q.id}_scene-${i+1}.png`});
+        // Show this question image beside its matching video scene in the same sequence.
+        const sequencePreview=$(`ccTplPreviewImage${i+1}`)||document.querySelector(`#ccVideoTemplateGrid article:nth-child(${i+1}) .cc-scene-image-preview`);
+        if(sequencePreview){sequencePreview.src=data;sequencePreview.alt=`${scenes[i].title} — generated question image`;sequencePreview.dataset.generatedQuestionImage='true';}
       }
       results.innerHTML='';
       generated.forEach((item)=>{
@@ -720,7 +723,7 @@ Ganit Setu — MP Board Mathematics Learning`,
         download.addEventListener('click',()=>{const a=document.createElement('a');a.href=item.data;a.download=item.name;document.body.appendChild(a);a.click();a.remove();});
         card.append(title,preview,download);results.appendChild(card);
       });
-      status.textContent=`✅ Q${q.id} के लिए पाँचों PNG तैयार हैं। हर इमेज अलग डाउनलोड करें।`;
+      status.textContent=`✅ Q${q.id} के लिए पाँचों PNG तैयार हैं और हर Scene के छोटे Preview में लग गई हैं। नीचे से PNG अलग डाउनलोड भी कर सकते हैं।`;
       msg('पाँचों Scene Images इसी पेज पर बन गई हैं।','success');
     }catch(e){console.error('[Ganit Setu] Five-scene image generation failed',e);status.textContent='इमेज नहीं बन पाईं: '+(e.message||'टेम्पलेट फाइल जाँचें।');msg('Scene Images नहीं बन पाईं: '+(e.message||e),'error');}
     finally{btn.disabled=false;btn.textContent='✨ पाँचों Scene Images बनाएं';}
