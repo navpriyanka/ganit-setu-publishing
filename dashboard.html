@@ -1,11 +1,93 @@
+```html
 <!doctype html>
-<html lang="hi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ganit Setu Publishing</title><link rel="stylesheet" href="assets/css/style.css"><style>
-.pub-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;margin-top:24px}.pub-card{display:block;padding:22px;border:1px solid #dbe3ef;border-radius:16px;background:#fff;color:#172033;text-decoration:none;box-shadow:0 5px 20px #0f172a0a;transition:transform .15s,box-shadow .15s}.pub-card:hover{transform:translateY(-2px);box-shadow:0 10px 25px #0f172a12}.pub-card .emoji{font-size:30px}.pub-card h2{font-size:19px;margin:12px 0 6px}.pub-card p{font-size:14px;color:#64748b;margin:0;line-height:1.5}.pub-note{margin-top:24px;padding:15px;border-radius:12px;background:#fff7ed;color:#9a3412;font-size:14px;line-height:1.6}
-</style></head><body><header class="topbar"><div class="brand-inline"><span class="logo-small">GS</span><b>GANIT SETU</b><span class="tag">Publishing</span></div></header><main class="page"><section class="welcome-card"><div><p class="eyebrow">CONTENT WORKSPACE</p><h1>Ganit Setu Publishing</h1><p>Social publishing, content planning, video scenes और content creation के लिए अलग workspace.</p></div><div class="brand-badge">GS<br><small>PUBLISHING</small></div></section><section class="pub-grid">
-<a class="pub-card" href="social-media-manager.html"><span class="emoji">📱</span><h2>Social Media Manager</h2><p>Content बनाना, preview और social publishing workflows.</p></a>
-<a class="pub-card" href="content-planning.html"><span class="emoji">📅</span><h2>Content Day Planning</h2><p>Question pool से दिनवार content plan और platform workflows.</p></a>
-<a class="pub-card" href="video-scene-manager.html"><span class="emoji">🎬</span><h2>Video Scene Manager</h2><p>Question-wise scenes, video और image assets का प्रबंधन.</p></a>
-<a class="pub-card" href="question-bank.html"><span class="emoji">📚</span><h2>Question Bank Upload</h2><p>Class 9/10 प्रश्न CSV से upload करें, पहले preview/validation देखें और duplicate प्रश्न skip करें।</p></a>
-<a class="pub-card" href="question-selection.html"><span class="emoji">🎨</span><h2>Content Creation</h2><p>Questions चुनें और unified content creation workflow खोलें.</p></a>
-<a class="pub-card" href="master-prompt.html"><span class="emoji">🧠</span><h2>Master Prompt & Brand</h2><p>Content generation prompt और approved brand assets.</p></a>
-</section><div class="pub-note"><b>Setup status:</b> यह UI/code extraction है। नए Supabase project, tables, Edge Functions, Storage policies, provider secrets और automatic cleanup की configuration पूरी होने तक publishing workflows live नहीं माने जाएँ।</div></main></body></html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ganit Setu Publishing</title>
+<link rel="stylesheet" href="assets/css/style.css">
+
+<style>
+.pub-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+  gap:16px;
+  margin-top:24px
+}
+.pub-card{
+  display:block;
+  padding:22px;
+  border:1px solid #dbe3ef;
+  border-radius:16px;
+  background:#fff;
+  color:#172033;
+  text-decoration:none;
+  box-shadow:0 5px 20px #0f172a0a;
+  transition:transform .15s,box-shadow .15s
+}
+.pub-card:hover{
+  transform:translateY(-2px);
+  box-shadow:0 10px 25px #0f172a12
+}
+.pub-card .emoji{font-size:30px}
+.pub-card h2{font-size:19px;margin:12px 0 6px}
+.pub-card p{
+  font-size:14px;
+  color:#64748b;
+  margin:0;
+  line-height:1.5
+}
+.pub-note{
+  margin-top:24px;
+  padding:15px;
+  border-radius:12px;
+  background:#fff7ed;
+  color:#9a3412;
+  font-size:14px;
+  line-height:1.6
+}
+</style>
+</head>
+
+<body>
+<header class="topbar">
+  <div class="brand-inline">
+    <span class="logo-small">GS</span>
+    <b>GANIT SETU</b>
+    <span class="tag">Publishing</span>
+  </div>
+</header>
+
+<main class="page">
+  <section class="welcome-card">
+    <div>
+      <p class="eyebrow">CONTENT WORKSPACE</p>
+      <h1>Ganit Setu Publishing</h1>
+      <p>Social publishing, content planning, video scenes और content creation के लिए अलग workspace.</p>
+    </div>
+    <div class="brand-badge">GS<br><small>PUBLISHING</small></div>
+  </section>
+
+  <section class="pub-grid">
+
+    <a class="pub-card" href="question-selection.html">
+      <span class="emoji">🎨</span>
+      <h2>Content Creation</h2>
+      <p>Questions चुनें और unified content creation workflow खोलें.</p>
+    </a>
+
+    <a class="pub-card" href="question-bank.html">
+      <span class="emoji">📚</span>
+      <h2>Question Bank Upload</h2>
+      <p>Class 9/10 प्रश्न CSV से upload करें, पहले preview/validation देखें और duplicate प्रश्न skip करें।</p>
+    </a>
+
+  </section>
+
+  <div class="pub-note">
+    <b>Setup status:</b> यह UI/code extraction है। नए Supabase project, tables, Edge Functions, Storage policies, provider secrets और automatic cleanup की configuration पूरी होने तक publishing workflows live नहीं माने जाएँ।
+  </div>
+</main>
+</body>
+</html>
+```
