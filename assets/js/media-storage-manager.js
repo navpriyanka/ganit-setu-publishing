@@ -43,6 +43,9 @@ async function load(){
    sb.storage.from(bucket).list('content-packages/youtube',{limit:100,sortBy:{column:'created_at',order:'desc'}})
   ]);
   for(const res of [images,videos,youtube])if(res.error)throw res.error;
+  console.log('IMAGE COUNT:', images.data?.length);
+console.log('IMAGE FILE NAMES:', (images.data || []).map(x => x.name));
+console.log('IMAGE ERROR:', images.error);
   console.log('Image storage response:', images);
   console.log('IMAGE COUNT:', images.data?.length);
 console.log('IMAGE FILE NAMES:', (images.data || []).map(x => x.name));
