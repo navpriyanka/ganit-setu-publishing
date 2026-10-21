@@ -1,6 +1,7 @@
 (function(){
 'use strict';
 const cfg=window.GS_SUPABASE_CONFIG||{};
+console.log('SUPABASE CONFIG:', cfg.url, cfg.publishableKey);
 const sb=window.supabaseClient||(window.supabase&&window.supabase.createClient(cfg.url,cfg.publishableKey));
 const $=id=>document.getElementById(id);
 const bucket='content-media';
