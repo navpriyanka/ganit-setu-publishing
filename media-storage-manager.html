@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Media Storage Manager — GANIT SETU</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<style>
+.ms-wrap{max-width:1100px;margin:24px auto;padding:0 14px}.ms-head,.ms-card{background:#fff;border:1px solid #dbe3ef;border-radius:16px;padding:18px;margin-bottom:16px}
+.ms-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}.ms-stat{padding:16px;border-radius:12px;background:#f4f7fb}.ms-stat strong{font-size:27px;display:block}.ms-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.ms-tabs button{padding:10px 14px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;cursor:pointer}.ms-tabs button.active{background:#1d4ed8;color:white}.ms-row{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-bottom:1px solid #e5e7eb;padding:12px 0}.ms-path{font-size:13px;overflow-wrap:anywhere;color:#475569}.ms-btn{border:0;border-radius:9px;padding:10px 12px;background:#166534;color:white;cursor:pointer}.ms-btn:disabled{opacity:.5}.ms-muted{color:#64748b;font-size:14px}.ms-alert{background:#fff7ed;padding:12px;border-radius:10px;color:#9a3412;line-height:1.5}.ms-status{margin:10px 0}
+</style>
+</head>
+<body>
+<header class="topbar"><div class="brand-inline"><span class="logo-small">GS</span><b>GANIT SETU</b><span class="tag">Media Storage Manager</span></div></header>
+<main class="ms-wrap">
+<div class="ms-head"><a href="dashboard.html">← Dashboard</a><h1>📊 Media Storage Manager</h1><p>यहाँ से temporary media देखें और काम पूरा होने पर Mark as Published करें।</p>
+<div class="ms-alert"><b>ध्यान दें:</b> Mark as Published दबाने पर चुनी गई temporary image/video को Supabase से हटाने का अनुरोध जाएगा। यह manual publishing की पुष्टि है—यह प्लेटफॉर्म पर पोस्ट होने की स्वतंत्र जाँच नहीं करता। स्थायी templates/logos को सूची में शामिल नहीं किया जाता।</div>
+<div class="ms-grid" style="margin-top:14px"><div class="ms-stat">🖼️ Temporary Images<strong id="imageCount">—</strong></div><div class="ms-stat">🎬 Temporary Videos<strong id="videoCount">—</strong></div><div class="ms-stat">💾 Listed Media<strong id="totalCount">—</strong></div></div>
+<p class="ms-muted">Text posts: इस ZIP में text-posts के लिए कोई सत्यापित database table/schema उपलब्ध नहीं है, इसलिए अभी वास्तविक text count यहाँ नहीं दिखाया जा सकता। Text section का मौजूदा Mark as Published बटन बना रहेगा।</p>
+<div class="ms-tabs"><button class="active" data-tab="images">🖼️ Images</button><button data-tab="videos">🎬 Videos</button></div>
+<div id="msStatus" class="ms-status" role="status">Supabase से सूची लोड की जा रही है…</div>
+<div id="mediaList" class="ms-card"></div><button id="refreshMedia" class="ms-btn">↻ Refresh Status</button>
+</div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/supabase-config.js?v=20261021-media-manager"></script>
+<script src="assets/js/media-storage-manager.js?v=20261021-media-manager"></script>
+</body></html>
