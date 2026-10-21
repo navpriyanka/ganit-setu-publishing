@@ -705,32 +705,22 @@ Ganit Setu — MP Board Mathematics Learning`,
       ];
       const generated=[];
       for(let i=0;i<5;i++){
-        // Use the corresponding scene image only to obtain canvas dimensions.
-        // IMPORTANT: do NOT draw the uploaded/static template into this PNG.
-        // This PNG is a transparent overlay and will sit above the VIDEO scene.
+        // Keep the original scene template untouched. Render question text as a transparent overlay.
         const img=await loadImg(SCENE_IMAGE_FILES[i]);
         const W=img.naturalWidth||1080,H=img.naturalHeight||1920;
-        const c=document.createElement('canvas');c.width=W;c.height=H;
-        const ctx=c.getContext('2d');
-        ctx.clearRect(0,0,W,H);
-        drawScenePanel(ctx,scenes[i].lines,W,H,i+1);
-        const data=c.toDataURL('image/png');
-        generated.push({title:scenes[i].title,data,name:`GANIT_SETU_Q${q.id}_scene-${i+1}-overlay.png`,sceneNo:i+1});
+        const c=document.createElement('canvas');c.width=W;c.height=H;const ctx=c.getContext('2d');
+        ctx.clearRect(0,0,W,H);drawScenePanel(ctx,scenes[i].lines,W,H,i+1);
+        const data=c.toDataURL('image/png');generated.push({title:scenes[i].title,data,name:`GANIT_SETU_Q${q.id}_scene-${i+1}-overlay.png`,sceneNo:i+1});
       }
       results.innerHTML='';
       generated.forEach((item)=>{
         const card=document.createElement('article');card.className='cc-generated-scene-card';
         const title=document.createElement('b');title.textContent=item.title;
         const composite=document.createElement('div');composite.className='cc-scene-composite-preview';
-        const video=document.createElement('video');
-        video.src=`assets/videos/video-templates/scene-${item.sceneNo}.mp4`;
-        video.controls=true;video.playsInline=true;video.preload='metadata';
-        video.setAttribute('aria-label',`${item.title} video template`);
-        const overlay=document.createElement('img');overlay.src=item.data;overlay.alt=`${item.title} transparent question overlay`;
-        overlay.className='cc-scene-overlay-layer';
+        const video=document.createElement('video');video.src=`assets/video-templates/scene-${item.sceneNo}.mp4`;video.controls=true;video.playsInline=true;video.preload='metadata';video.setAttribute('aria-label',`${item.title} video template`);
+        const overlay=document.createElement('img');overlay.src=item.data;overlay.alt=`${item.title} transparent question overlay`;overlay.className='cc-scene-overlay-layer';
         composite.append(video,overlay);
-        const note=document.createElement('small');note.className='cc-overlay-note';
-        note.textContent='पारदर्शी प्रश्न-इमेज वीडियो सीन के ऊपर दिखाई गई है; मूल टेम्पलेट नहीं बदला गया।';
+        const note=document.createElement('small');note.className='cc-overlay-note';note.textContent='प्रश्न की transparent image इस video scene के ऊपर preview हो रही है।';
         const download=document.createElement('button');download.type='button';download.className='btn ghost';download.textContent='⬇️ Transparent Overlay PNG डाउनलोड';
         download.addEventListener('click',()=>{const a=document.createElement('a');a.href=item.data;a.download=item.name;document.body.appendChild(a);a.click();a.remove();});
         card.append(title,composite,note,download);results.appendChild(card);
@@ -944,9 +934,9 @@ Ganit Setu — MP Board Mathematics Learning`,
     document.querySelectorAll('[data-platform]').forEach(b=>b.onclick=e=>{if(e.target.closest('.platform-connect'))return;msg('Platform चुनने की जरूरत नहीं है—कंटेंट चारों प्लेटफॉर्म के लिए एक साथ तैयार होगा।','info')});
     document.querySelectorAll('[data-type]').forEach(b=>b.onclick=()=>switchContentType(b.dataset.type));
     document.querySelectorAll('.platform-connect').forEach(b=>b.onclick=e=>{e.stopPropagation();connectPlatform(b.dataset.connect)});
-    $('generateFiveSceneImages')?.addEventListener('click',makeFiveSceneImages);$('generatePost').onclick=generatePost;if($('generateImageContent'))$('generateImageContent').onclick=generateImageContentPackage;$('generateImage').onclick=generateImage;$('createVideo').onclick=videoModal;$('savePackage').onclick=savePackage;
+    $('generateFiveSceneImages')?.addEventListener('click',makeFiveSceneImages);$('combineFiveScenes')?.addEventListener('click',()=>msg('अगले चरण में browser-compatible final video composer जोड़ा जाएगा। अभी पहले पाँचों scene previews जाँचें।','info'));$('generatePost').onclick=generatePost;if($('generateImageContent'))$('generateImageContent').onclick=generateImageContentPackage;$('generateImage').onclick=generateImage;$('savePackage').onclick=savePackage;
     $('markAsPublishedTemporary')?.addEventListener('click',()=>{msg('Mark as Published बटन अभी अस्थायी है। अभी यह केवल UI/टेस्ट के लिए है—Supabase से कोई इमेज या वीडियो डिलीट नहीं होगा। अगली स्टेज में इसे वास्तविक cleanup से जोड़ा जाएगा।','info')});
-    $('previewPackage').onclick=()=>{const p=readPackageFields();$('previewQuestion').textContent=currentQuestion?`Q${currentQuestion.id}`:'—';$('previewText').textContent=JSON.stringify(p,null,2);$('previewImage').src=generatedImageData||generatedImageUrl||'';$('previewModal').hidden=false};$('closePreview').onclick=()=>$('previewModal').hidden=true;$('closeVideo').onclick=()=>{$('videoModal').hidden=true;$('videoFrame').src=''};
+    $('previewPackage').onclick=()=>{const p=readPackageFields();$('previewQuestion').textContent=currentQuestion?`Q${currentQuestion.id}`:'—';$('previewText').textContent=JSON.stringify(p,null,2);$('previewImage').src=generatedImageData||generatedImageUrl||'';$('previewModal').hidden=false};$('closePreview').onclick=()=>$('previewModal').hidden=true;
     window.addEventListener('message',e=>{if(e.data?.type==='GS_VIDEO_READY'&&currentQuestion&&String(e.data.question_id)===String(currentQuestion.id)){videoUrl=e.data.video_url||'';$('videoStatus').textContent='✅ Final Video Ready';$('videoLink').href=videoUrl;$('videoLink').hidden=!videoUrl;msg('Final video तैयार है। अब Save करके platform publish कर सकते हैं।','success')}})
   }
   document.addEventListener('DOMContentLoaded',async()=>{bind();await refreshConnectionStatuses();await loadChapters();const legacy=read('gsCurrentContentQuestion',null);if(!questionsByType.post&&legacy)questionsByType.post=legacy;restoreTypeState('post');updateState();const master=$('masterTemplatePreview');if(master){master.onload=()=>{const st=$('imageStatus');if(st&&!generatedImageData)st.textContent=`Master template loaded (${master.naturalWidth}×${master.naturalHeight}). Image Post का अलग Question चुनें।`;};master.onerror=()=>{const st=$('imageStatus');if(st)st.textContent='Master template नहीं मिली। assets/images/content-post-template.png को GitHub में सही path पर commit करें।';};if(master.complete&&master.naturalWidth){const st=$('imageStatus');if(st&&!generatedImageData)st.textContent=`Master template loaded (${master.naturalWidth}×${master.naturalHeight}). Image Post का अलग Question चुनें।`;}}});
