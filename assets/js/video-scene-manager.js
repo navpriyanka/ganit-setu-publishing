@@ -709,8 +709,12 @@ async function generateSceneImage(sn){
     imageRowsByScene[sn]=payload;
     renderSceneImage(qid,sn,payload);
     document.getElementById('finalStatus').textContent=`✅ Scene ${sn} image saved. अब यही image बाद में video layer में लगाई जा सकती है।`;
+    return true;
   }catch(e){
-    console.error('Image generate failed:',e);st.textContent='❌ Image generate failed';alert(`Scene ${sn} image generate failed: ${e.message||e}`);
+    console.error('Image generate failed:',e);
+    if(st)st.textContent='❌ Image generate failed';
+    alert(`Scene ${sn} image generate failed: ${e.message||e}`);
+    return false;
   }
 }
 
@@ -722,13 +726,19 @@ async function generateAllSceneImages(){
   if(btn){btn.disabled=true;btn.textContent='⏳ पाँचों इमेज बन रही हैं…';}
   const status=document.getElementById('finalStatus');
   let completed=0;
+  const failed=[];
   try{
     for(const scene of scenes){
-      if(status)status.textContent=`⏳ Scene ${scene.n}/5 की इमेज बनाई जा रही है…`;
-      await generateSceneImage(scene.n);
-      completed++;
+      if(status)status.textContent=`⏳ Scene ${scene.n}/5 की transparent PNG बनाई और सेव की जा रही है…`;
+      const ok=await generateSceneImage(scene.n);
+      if(ok)completed++;
+      else failed.push(scene.n);
     }
-    if(status)status.textContent=`✅ पाँचों Scene images तैयार करने की प्रक्रिया पूरी हुई (${completed}/5)। नीचे हर Scene की स्थिति देख लें।`;
+    if(status){
+      status.textContent=failed.length
+        ? `⚠️ ${completed}/5 इमेज सेव हुईं। Scene ${failed.join(', ')} में समस्या आई—उनकी स्थिति नीचे देखें।`
+        : `✅ पाँचों transparent PNG इमेज बनकर Supabase में सेव हो गईं (5/5)। नीचे हर Scene का Preview देखें।`;
+    }
   }finally{
     if(btn){btn.disabled=false;btn.textContent='🖼️ पाँचों Scene की Images बनाएं';}
   }
