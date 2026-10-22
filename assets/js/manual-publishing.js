@@ -74,7 +74,7 @@ $('submitContent').addEventListener('click',async()=>{
      platform,
      content_type:d.contentType,
      title:d.title||d.fileName||'Ganit Setu Manual Content',
-     caption:[d.caption,d.hashtags].filter(Boolean).join('\n\n'),
+     caption:[d.caption,d.hashtags,$('generatedHashtags')?.value?.trim()].filter(Boolean).join('\n\n'),
      description:d.caption,
      hashtags:d.hashtags,
      media_url:mediaUrl||null,
@@ -90,5 +90,61 @@ $('submitContent').addEventListener('click',async()=>{
  }catch(e){status('❌ Queue/Upload नहीं हो सका: '+(e.message||String(e))+'\\nकृपया Supabase table, Storage policy और backend handler जाँचें। कोई automatic retry या delete नहीं किया गया।');}
  finally{btn.disabled=false;}
 });
+
+async function fileAsBase64(file){
+ return await new Promise((resolve,reject)=>{
+  const reader=new FileReader();
+  reader.onload=()=>{const value=String(reader.result||'');resolve(value.includes(',')?value.split(',')[1]:value);};
+  reader.onerror=()=>reject(new Error('इमेज पढ़ी नहीं जा सकी।'));
+  reader.readAsDataURL(file);
+ });
+}
+$('generateGeminiContent').addEventListener('click',async()=>{
+ const btn=$('generateGeminiContent');
+ const client=getClient();
+ const file=$('media').files[0]||null;
+ const title=$('title').value.trim();
+ const instructions=$('geminiInstructions').value.trim();
+ if(!client){status('❌ Supabase client/config उपलब्ध नहीं है।');return;}
+ if(!file || !file.type.startsWith('image/')){status('❌ पहले Image content चुनें और इमेज अपलोड करें।');return;}
+ if(!title){status('❌ पहले पोस्ट का शीर्षक लिखें।');return;}
+ let token;
+ try{
+  const {data,error}=await client.auth.getSession();
+  if(error)throw error;
+  token=data?.session?.access_token;
+  if(!token)throw new Error('Admin session नहीं मिली। Admin Panel में login करें।');
+ }catch(e){status('❌ '+e.message);return;}
+ const old=btn.textContent;btn.disabled=true;btn.textContent='⏳ Gemini कंटेंट बना रहा है…';
+ try{
+  const imageData=await fileAsBase64(file);
+  const topic=[
+   'Manual image post for GANIT SETU.',
+   'User-provided title: '+title,
+   'Create publish-ready Hindi text for Facebook and Instagram based on the uploaded image. Do not invent facts that are not visible or supplied.',
+   instructions ? 'Additional instructions: '+instructions : '',
+   'Return the same JSON package structure used by the existing Ganit Setu Gemini automation, including platform_packages for facebook, instagram, youtube, whatsapp. We will publish only to Facebook and Instagram in this test.'
+  ].filter(Boolean).join('\n\n');
+  const url=(cfg.url||'').replace(/\/+$/,'')+'/functions/v1/gemini-generate-post';
+  const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token,'apikey':cfg.publishableKey||''},body:JSON.stringify({type:'image',classLevel:'9/10',language:'hi',topic,prompt:topic,masterPrompt:topic,platforms:['facebook','instagram','youtube','whatsapp'],image:{mimeType:file.type,data:imageData}})});
+  const raw=await response.text();let result={};try{result=JSON.parse(raw)}catch{result={error:raw}}
+  if(!response.ok||result.success===false)throw new Error(result.error||result.message||`Gemini request failed (${response.status})`);
+  let value=result.text??result.content??result.result?.text??result.data?.text??'';
+  if(value&&typeof value==='object')value=JSON.stringify(value);
+  let pkg=typeof value==='string'?JSON.parse(value):value;
+  if(!pkg||typeof pkg!=='object')throw new Error('Gemini का response पढ़ा नहीं जा सका।');
+  const fb=pkg.platform_packages?.facebook||pkg;
+  const ig=pkg.platform_packages?.instagram||pkg;
+  const captions=[
+    'FACEBOOK\n'+[fb.hook,fb.post||fb.caption,Array.isArray(fb.hashtags)?fb.hashtags.join(' '):fb.hashtags].filter(Boolean).join('\n\n'),
+    'INSTAGRAM\n'+[ig.hook,ig.caption||ig.post,Array.isArray(ig.hashtags)?ig.hashtags.join(' '):ig.hashtags].filter(Boolean).join('\n\n')
+  ].join('\n\n--------------------\n\n');
+  $('caption').value=captions.trim();
+  $('generatedHashtags').value=[...(Array.isArray(fb.hashtags)?fb.hashtags:[]),...(Array.isArray(ig.hashtags)?ig.hashtags:[])].filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i).join(' ');
+  status('✅ Gemini ने Facebook और Instagram के लिए कंटेंट तैयार किया। प्रकाशित करने से पहले जाँच/एडिट कर लें।');
+ }catch(e){status('❌ Gemini कंटेंट जनरेट नहीं हुआ: '+(e.message||String(e))+'। Edge Function में image input support भी जरूरी है।');}
+ finally{btn.disabled=false;btn.textContent=old;}
+});
+
 renderDrafts();
 })();
