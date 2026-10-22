@@ -5,7 +5,8 @@ console.log('SUPABASE CONFIG:', cfg.url, cfg.publishableKey);
 const sb=window.supabaseClient||(window.supabase&&window.supabase.createClient(cfg.url,cfg.publishableKey));
 const $=id=>document.getElementById(id);
 const bucket='content-media';
-let tab='images', items={images:[],videos:[],texts:[]}, textRows=[];
+let tab='texts', items={images:[],videos:[],texts:[]}, textRows=[];
+function activeMediaItems(){return tab==='combined'?[...items.images,...items.videos]:(items[tab]||[])}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function status(s){$('msStatus').textContent=s}
 function kind(path){
@@ -77,14 +78,14 @@ async function load(){
  }catch(e){console.error(e);status('लोड नहीं हो पाया: '+(e.message||e)+' — Storage policies/लॉगिन जाँचें।')}
 }
 function render(){
- document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+ document.querySelectorAll('[data-tab]').forEach(b=>{const active=b.dataset.tab===tab;b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});
  const textPanel=$('textPostsPanel'); if(textPanel) textPanel.hidden=tab!=='texts';
- const list=items[tab]||[];
- if(tab==='texts'){ $('mediaList').hidden=true; $('bulkActions').hidden=true; loadTextPosts(); return; }
- $('mediaList').hidden=false; $('bulkActions').hidden=false;
- if(!list.length){$('mediaList').innerHTML='<p>इस श्रेणी में कोई पहचानी गई temporary media file नहीं मिली।</p>';bindBulk();return}
- $('mediaList').innerHTML=list.map((x,i)=>`<div class="ms-row"><label><input type="checkbox" data-select-media="${i}"> चुनें</label><div style="flex:1"><b>${tab==='images'?'🖼️':'🎬'} ${esc(x.name)}</b><div class="ms-path">${esc(x.path)}</div><div class="ms-muted">${x.size?`${(x.size/1024/1024).toFixed(2)} MB · `:''}${esc(x.created_at||'समय उपलब्ध नहीं')}</div></div><button class="ms-btn" data-publish="${i}">✅ Mark as Published</button></div>`).join('');
- $('mediaList').querySelectorAll('[data-publish]').forEach(b=>b.addEventListener('click',()=>mark(items[tab][Number(b.dataset.publish)],b)));
+ const list=activeMediaItems();
+ if(tab==='texts'){ $('mediaList').hidden=true; $('bulkActions').hidden=true; $('msStatus').hidden=true; loadTextPosts(); return; }
+ $('msStatus').hidden=false; $('mediaList').hidden=false; $('bulkActions').hidden=false;
+ if(!list.length){$('mediaList').innerHTML=tab==='combined'?'<p>अभी Combined Media में कोई temporary image या video नहीं मिली।</p>':'<p>इस श्रेणी में कोई पहचानी गई temporary media file नहीं मिली।</p>';bindBulk();return}
+ $('mediaList').innerHTML=list.map((x,i)=>`<div class="ms-row"><label><input type="checkbox" data-select-media="${i}"> चुनें</label><div style="flex:1"><b>${x.type==='images'?'🖼️':'🎬'} ${esc(x.name)}</b><div class="ms-path">${esc(x.path)}</div><div class="ms-muted">${x.size?`${(x.size/1024/1024).toFixed(2)} MB · `:''}${esc(x.created_at||'समय उपलब्ध नहीं')}</div></div><button class="ms-btn" data-publish="${i}">✅ Mark as Published</button></div>`).join('');
+ $('mediaList').querySelectorAll('[data-publish]').forEach(b=>b.addEventListener('click',()=>mark(activeMediaItems()[Number(b.dataset.publish)],b)));
  bindBulk();
 }
 function bindBulk(){
@@ -93,7 +94,7 @@ function bindBulk(){
    const ids=[...document.querySelectorAll('[data-select-media]:checked')].map(c=>Number(c.dataset.selectMedia));
    if(!ids.length){status('पहले कम से कम एक फाइल चुनें।');return}
    if(!confirm(`${ids.length} चुनी गई फाइलों को Mark as Published करके डिलीट करने की पुष्टि करें?`))return;
-   for(const i of ids){const item=items[tab][i];if(item)await mark(item,bulk);}
+   for(const i of ids){const item=activeMediaItems()[i];if(item)await mark(item,bulk);}
  };
 }
 async function mark(item,button){
