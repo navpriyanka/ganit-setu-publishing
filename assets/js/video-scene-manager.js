@@ -1,8 +1,8 @@
 (function(){
 'use strict';
 
-const SUPABASE_URL='https://ucovgluwsiejrhjweuls.supabase.co';
-const SUPABASE_ANON_KEY='sb_publishable_1XHxsjb_vNK8BYHHGiIYeQ__ouET5_Q';
+const SUPABASE_URL='https://cbgojvnbkosdehvwerth.supabase.co';
+const SUPABASE_ANON_KEY='sb_publishable_a5XOePzNSNn72WQm_xrIAQ_cj5Z01W_';
 const BUCKET='content-media';
 
 const scenes=[
@@ -377,16 +377,7 @@ async function init(){
   if(!window.supabase){alert('Supabase library load नहीं हुई।');return;}
   sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
   const {data:{session}}=await sb.auth.getSession();
-  // Opening this workspace must not redirect to Home merely because no admin session exists.
-  // Database writes and protected RPCs may still require an authorized session.
-  if(!session){
-    const note=document.createElement('div');
-    note.id='vsmSessionNotice';
-    note.style.cssText='margin:12px 0;padding:10px 12px;border:1px solid #f59e0b;border-radius:10px;background:#fffbeb;color:#92400e;font-size:13px';
-    note.textContent='Workspace खुल गया है। अभी Admin session नहीं है; Supabase से प्रश्न लोड करने या सुरक्षित बदलाव करने पर अनुमति की त्रुटि आ सकती है।';
-    const main=document.querySelector('main');
-    if(main) main.prepend(note);
-  }
+  if(!session){location.href='index.html';return;}
 
   document.getElementById('batchGenerateBtn').addEventListener('click',loadQuestions);
   installQuickPreviewStyles();
@@ -723,8 +714,29 @@ async function generateSceneImage(sn){
   }
 }
 
-// Inline HTML buttons need a window-level handler because this file uses an IIFE.
+// Generate all five images from the selected question, using the existing fixed canvas template.
+// Images are generated and saved sequentially to avoid overlapping Storage uploads/upserts.
+async function generateAllSceneImages(){
+  if(!selectedQuestion){alert('पहले कोई प्रश्न चुनें।');return;}
+  const btn=document.getElementById('generateAllSceneImagesBtn');
+  if(btn){btn.disabled=true;btn.textContent='⏳ पाँचों इमेज बन रही हैं…';}
+  const status=document.getElementById('finalStatus');
+  let completed=0;
+  try{
+    for(const scene of scenes){
+      if(status)status.textContent=`⏳ Scene ${scene.n}/5 की इमेज बनाई जा रही है…`;
+      await generateSceneImage(scene.n);
+      completed++;
+    }
+    if(status)status.textContent=`✅ पाँचों Scene images तैयार करने की प्रक्रिया पूरी हुई (${completed}/5)। नीचे हर Scene की स्थिति देख लें।`;
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='🖼️ पाँचों Scene की Images बनाएं';}
+  }
+}
+
+// Inline HTML buttons need window-level handlers because this file uses an IIFE.
 window.generateSceneImage = generateSceneImage;
+window.generateAllSceneImages = generateAllSceneImages;
 
 async function saveQuestionScene(qid,sn,file){
   if(!file.type.startsWith('video/')){alert('केवल video file चुनें।');return;}
@@ -1089,12 +1101,6 @@ async function buildFinalPreview(){
     for(let n=1;n<=5;n++){
       await ffmpeg.writeFile(`scene-${n}.png`,await fetchFile(imagePublicUrl(imageRowsByScene[n].storage_path)));
     }
-    // Transition cards are static project assets, separate from generated question images.
-    const transitionFiles=['transition-1-options.png','transition-2-hint.png','transition-3-answer.png','transition-4-follow.png'];
-    for(const name of transitionFiles){
-      const assetUrl=new URL(`assets/images/transitions/${name}`,location.href).href;
-      await ffmpeg.writeFile(name,await fetchFile(assetUrl));
-    }
 
     const filters=[
       '[0:v]scale=1080:1920,setsar=1,split=2[base][gapbase]',
@@ -1114,20 +1120,10 @@ async function buildFinalPreview(){
       // Then restore the untouched Canva master ONLY in the 1-sec indicator gaps,
       // so the middle indicator images remain fully visible.
       '[v5]fade=t=in:st=0:d=0.25,fade=t=out:st=7.75:d=0.25,fade=t=in:st=9:d=0.25,fade=t=out:st=16.75:d=0.25,fade=t=in:st=18:d=0.25,fade=t=out:st=25.75:d=0.25,fade=t=in:st=27:d=0.25,fade=t=out:st=34.75:d=0.25,fade=t=in:st=36:d=0.25,fade=t=out:st=44.75:d=0.25[vfaded]',
-      // Restore the master video in the four 1-second gaps, then show the
-      // supplied transition card over each gap with a short alpha fade.
-      '[vfaded][gapbase]overlay=0:0:eof_action=repeat:shortest=0:enable=\'gte(t,8)*lt(t,9)+gte(t,17)*lt(t,18)+gte(t,26)*lt(t,27)+gte(t,35)*lt(t,36)\'[vbase]',
-      '[6:v]scale=1080:1920,format=rgba,fade=t=in:st=0:d=0.15:alpha=1,fade=t=out:st=0.85:d=0.15:alpha=1[t1]',
-      '[7:v]scale=1080:1920,format=rgba,fade=t=in:st=0:d=0.15:alpha=1,fade=t=out:st=0.85:d=0.15:alpha=1[t2]',
-      '[8:v]scale=1080:1920,format=rgba,fade=t=in:st=0:d=0.15:alpha=1,fade=t=out:st=0.85:d=0.15:alpha=1[t3]',
-      '[9:v]scale=1080:1920,format=rgba,fade=t=in:st=0:d=0.15:alpha=1,fade=t=out:st=0.85:d=0.15:alpha=1[t4]',
-      '[vbase][t1]overlay=0:0:eof_action=repeat:shortest=0:enable=\'gte(t,8)*lt(t,9)\'[vt1]',
-      '[vt1][t2]overlay=0:0:eof_action=repeat:shortest=0:enable=\'gte(t,17)*lt(t,18)\'[vt2]',
-      '[vt2][t3]overlay=0:0:eof_action=repeat:shortest=0:enable=\'gte(t,26)*lt(t,27)\'[vt3]',
-      '[vt3][t4]overlay=0:0:eof_action=repeat:shortest=0:enable=\'gte(t,35)*lt(t,36)\'[vout]'
+      '[vfaded][gapbase]overlay=0:0:eof_action=repeat:shortest=0:enable=\'gte(t,8)*lt(t,9)+gte(t,17)*lt(t,18)+gte(t,26)*lt(t,27)+gte(t,35)*lt(t,36)\'[vout]'
     ].join(';');
 
-    status.textContent='⏳ Original video पर 5 Scene images और 4 transition cards overlay हो रहे हैं…';
+    status.textContent='⏳ Original 45-sec video पर 5 Scene images overlay हो रही हैं…';
     await Promise.race([
       ffmpeg.exec([
         '-i','master.mp4',
@@ -1136,10 +1132,6 @@ async function buildFinalPreview(){
         '-loop','1','-i','scene-3.png',
         '-loop','1','-i','scene-4.png',
         '-loop','1','-i','scene-5.png',
-        '-loop','1','-i','transition-1-options.png',
-        '-loop','1','-i','transition-2-hint.png',
-        '-loop','1','-i','transition-3-answer.png',
-        '-loop','1','-i','transition-4-follow.png',
         '-filter_complex',filters,
         '-map','[vout]',
         '-map','0:a?',
@@ -1175,7 +1167,7 @@ async function buildFinalPreview(){
     downloadBtn.dataset.url=verifyUrl;
     downloadBtn.dataset.single='1';
     document.getElementById('publishFinalBtn').disabled=false;
-    status.textContent='✅ पूरा Final MP4 (5 scenes + 4 transition cards) तैयार और Supabase में सुरक्षित है।';
+    status.textContent='✅ पूरा 45-sec Final MP4 तैयार और Supabase में सुरक्षित है।';
 
     try{ffmpeg.terminate();}catch(_){ }
   }catch(e){
