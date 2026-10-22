@@ -15,13 +15,16 @@
 <div class="ms-head"><a href="dashboard.html">← Dashboard</a><h1>📊 Media Storage Manager</h1><p>यहाँ से temporary media देखें और काम पूरा होने पर Mark as Published करें।</p>
 <div class="ms-alert"><b>ध्यान दें:</b> Mark as Published दबाने पर चुनी गई temporary image/video को Supabase से हटाने का अनुरोध जाएगा। यह manual publishing की पुष्टि है—यह प्लेटफॉर्म पर पोस्ट होने की स्वतंत्र जाँच नहीं करता। स्थायी templates/logos को सूची में शामिल नहीं किया जाता।</div>
 <div class="ms-grid" style="margin-top:14px"><div class="ms-stat">🖼️ Temporary Images<strong id="imageCount">—</strong></div><div class="ms-stat">🎬 Temporary Videos<strong id="videoCount">—</strong></div><div class="ms-stat">💾 Listed Media<strong id="totalCount">—</strong></div></div>
-<p class="ms-muted">Text posts: इस ZIP में text-posts के लिए कोई सत्यापित database table/schema उपलब्ध नहीं है, इसलिए अभी वास्तविक text count यहाँ नहीं दिखाया जा सकता। Text section का मौजूदा Mark as Published बटन बना रहेगा।</p>
+<p class="ms-muted">Text Post Manager अब Supabase की social_publish_queue और social_publish_logs टेबल से रिकॉर्ड दिखाएगा। यहाँ रिकॉर्ड हटाने से प्लेटफॉर्म पर प्रकाशित पोस्ट नहीं हटेगी; केवल Supabase के रिकॉर्ड हटेंगे।</p>
 <div class="ms-tabs"><button class="active" data-tab="images">🖼️ Images</button><button data-tab="videos">🎬 Videos</button><button data-tab="texts">📝 Text Posts</button></div>
 <div class="ms-card" id="textPostsPanel" hidden>
   <h2>📝 Text Posts</h2>
-  <p class="ms-muted">यहाँ Text Post drafts/records दिखाने के लिए मौजूदा database table/schema की पहचान करनी होगी। अभी ZIP में सत्यापित table नाम उपलब्ध नहीं है, इसलिए कोई नकली count नहीं दिखाया जाएगा।</p>
-  <div id="textPostsStatus">Text-post database integration अभी configure/test होना बाकी है।</div>
-  <button id="textPostsRefresh" class="ms-btn" type="button">↻ Refresh Text Status</button>
+  <p class="ms-muted">यह सूची Text, Image और Video सहित social_publish_queue में मौजूद सभी प्रकार के पोस्ट रिकॉर्ड दिखाती है। किसी रिकॉर्ड को हटाने पर उससे जुड़े social_publish_logs भी पहले हटाए जाएँगे। प्रकाशित पोस्ट Facebook/अन्य प्लेटफॉर्म से नहीं हटेगी।</p>
+  <div class="ms-alert"><b>सुरक्षा:</b> यहाँ केवल social_publish_queue और social_publish_logs के रिकॉर्ड हटेंगे। questions, daily_content_questions, content_plans और Supabase Storage की फाइलें नहीं हटेंगी।</div>
+  <div class="ms-grid" style="margin:12px 0"><div class="ms-stat">📝 Queue Records<strong id="textQueueCount">—</strong></div><div class="ms-stat">📋 Publish Logs<strong id="textLogCount">—</strong></div></div>
+  <div class="ms-row"><label><input type="checkbox" id="selectAllTextPosts"> सभी पोस्ट रिकॉर्ड चुनें</label><button id="deleteSelectedTextPosts" class="ms-btn" type="button" style="background:#b91c1c">🗑️ चुने हुए रिकॉर्ड हटाएँ</button><button id="deleteAllTextPosts" class="ms-btn" type="button" style="background:#991b1b">🗑️ सभी पोस्ट रिकॉर्ड और लॉग हटाएँ</button><button id="textPostsRefresh" class="ms-btn" type="button">↻ Refresh</button></div>
+  <div id="textPostsStatus" role="status" class="ms-status">Supabase रिकॉर्ड लोड हो रहे हैं…</div>
+  <div id="textPostsList"></div>
 </div>
 <div id="msStatus" class="ms-status" role="status">Supabase से सूची लोड की जा रही है…</div>
 <div id="mediaList" class="ms-card"></div><div class="ms-row" id="bulkActions">
@@ -33,5 +36,5 @@
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-config.js?v=20261021-media-manager"></script>
-<script src="assets/js/media-storage-manager.js?v=20261021-media-manager"></script>
+<script src="assets/js/media-storage-manager.js?v=20261022-text-post-manager"></script>
 </body></html>
