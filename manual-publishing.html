@@ -42,8 +42,15 @@
         <input id="title" maxlength="120" placeholder="पोस्ट का शीर्षक">
       </label>
     </div>
+    <label style="display:flex;flex-direction:column;gap:6px;margin-top:14px;font-weight:600">Gemini के लिए निर्देश (वैकल्पिक)
+      <textarea id="geminiInstructions" placeholder="इमेज और शीर्षक के आधार पर क्या कंटेंट बनाना है?"></textarea>
+    </label>
+    <div class="manual-actions"><button class="secondary" id="generateGeminiContent" type="button">✨ Gemini से पूरा कंटेंट बनवाएँ</button></div>
     <label style="display:flex;flex-direction:column;gap:6px;margin-top:14px;font-weight:600">Caption / Description
-      <textarea id="caption" placeholder="अपना पोस्ट टेक्स्ट, विवरण और call-to-action लिखें"></textarea>
+      <textarea id="caption" placeholder="Gemini का बनाया कंटेंट यहाँ आएगा; चाहें तो एडिट करें"></textarea>
+    </label>
+    <label style="display:flex;flex-direction:column;gap:6px;margin-top:14px;font-weight:600">Hashtags
+      <input id="generatedHashtags" placeholder="#GanitSetu #MPBoard">
     </label>
     <div class="manual-grid" style="margin-top:14px">
       <label>Hashtags<input id="hashtags" placeholder="#GanitSetu #MPBoard"></label>
