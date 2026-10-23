@@ -547,7 +547,7 @@ Ganit Setu — MP Board Mathematics Learning`,
   // No AI image generation is used here. Put the approved blank template at:
   // assets/images/content-post-template.png
   const IMAGE_TEMPLATE_URL=new URL('assets/images/content-post-template.png',document.baseURI).href;
-  const IMAGE_TEMPLATE_CONFIG={width:941,height:1672};
+  const IMAGE_TEMPLATE_CONFIG={width:1122,height:1402};
 
   function fitLines(ctx,text,maxWidth,maxLines,fontSize,minFontSize=20){
     let size=fontSize, lines=[];
@@ -581,8 +581,10 @@ Ganit Setu — MP Board Mathematics Learning`,
       const sx=W/941, sy=H/1672;
       const c=document.createElement('canvas');c.width=W;c.height=H;const ctx=c.getContext('2d');
       ctx.drawImage(template,0,0,W,H);
-      const X=n=>n*sx, Y=n=>n*sy, S=n=>n*Math.min(sx,sy);
-      // All question content stays inside the blank whiteboard; the template art remains untouched.
+      // Map the legacy layout coordinates into the actual whiteboard safe area of the 1122×1402 template.
+      // The template logo and frame are part of the background and are never modified.
+      const X=n=>205+(n-92)*(790/763), Y=n=>184+(n-155)*(748/792), S=n=>n*Math.min(W/1122,H/1402);
+      // All question content is mapped into the whiteboard safe area; template art remains untouched.
       // Class/chapter pill: blue + yellow, kept within the top of the blank board.
       ctx.save();ctx.shadowColor='rgba(13,48,91,.16)';ctx.shadowBlur=S(8);ctx.shadowOffsetY=Y(3);
       roundedRect(ctx,X(100),Y(155),X(740),Y(62),S(18));
