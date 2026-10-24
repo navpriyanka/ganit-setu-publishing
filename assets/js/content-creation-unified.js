@@ -730,14 +730,23 @@ Ganit Setu — MP Board Mathematics Learning`,
   // Image Post -> short motion video. Kept separate from the existing 5-scene Reel workflow.
   async function convertGeneratedImageToVideo(){
     const btn=$('convertImageToVideo'),status=$('imageVideoStatus'),wrap=$('imageVideoPreviewWrap'),preview=$('imageVideoPreview');
-    if(!generatedImageData)return msg('पहले Image Post की इमेज generate करें।','error');
+    // The visible preview is the source of truth as well: image state may be held in the
+    // preview while the tab/state selector has not yet persisted generatedImageData.
+    let imageSource=generatedImageData||'';
+    if(!imageSource){
+      const visiblePreview=$('imagePreview');
+      const candidate=visiblePreview?.currentSrc||visiblePreview?.src||'';
+      if(candidate && !candidate.endsWith('/')) imageSource=candidate;
+    }
+    if(!imageSource)return msg('इमेज का preview नहीं मिला। पहले Image टैब में इमेज तैयार होने दें, फिर वीडियो बनाएं।','error');
     if(imageVideoRecording)return;
     if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream)return msg('इस browser में video recording उपलब्ध नहीं है। नया Chrome/Edge इस्तेमाल करें।','error');
     btn.disabled=true;imageVideoRecording=true;btn.textContent='⏳ वीडियो बनाया जा रहा है…';
     let audioCtx=null,recorder=null,raf=0,oscillators=[],gainNodes=[];
     try{
-      const image=new Image();image.src=generatedImageData;
+      const image=new Image();image.crossOrigin='anonymous';image.src=imageSource;
       await new Promise((resolve,reject)=>{if(image.complete&&image.naturalWidth)return resolve();image.onload=resolve;image.onerror=()=>reject(new Error('Generated image load नहीं हुई।'))});
+      if(!generatedImageData&&imageSource.startsWith('data:'))generatedImageData=imageSource;
       const W=720,H=Math.round(720*image.naturalHeight/image.naturalWidth),duration=8;
       const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;const ctx=canvas.getContext('2d');
       const videoStream=canvas.captureStream(30);let audioStream=null;
