@@ -586,7 +586,7 @@ Ganit Setu — MP Board Mathematics Learning`,
       // never use X/Y (absolute positions) to calculate width or height.
       // Chapter strip: centered horizontally, with breathing room from the top of the board.
       // Keep all other question/option/comment coordinates unchanged.
-      const chapterW=764, chapterH=55, chapterX=(1100-chapterW)/2, chapterY=181;
+      const chapterW=764, chapterH=55, chapterX=(1200-chapterW)/2, chapterY=194;
       ctx.save();ctx.shadowColor='rgba(13,48,91,.14)';ctx.shadowBlur=S(5);ctx.shadowOffsetY=DY(2);
       roundedRect(ctx,X(chapterX),Y(chapterY),DX(chapterW),DY(chapterH),S(18));ctx.fillStyle='#123b85';ctx.fill();ctx.restore();
       ctx.fillStyle='#ffdf32';ctx.textAlign='center';ctx.textBaseline='middle';
