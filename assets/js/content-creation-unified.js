@@ -772,23 +772,26 @@ Ganit Setu — MP Board Mathematics Learning`,
       const emojis=['🤔','💡','🧠','✍️','✨'];
       const draw=now=>{
         const t=Math.min(1,(now-start)/(duration*1000));ctx.clearRect(0,0,W,H);
-        // Energetic zig-zag / clip-style motion: fast alternating diagonal slices reveal
-        // the same image with a small horizontal offset. The complete image remains readable.
-        const pulse=1+0.012*Math.sin(t*Math.PI*4),dw=W*pulse,dh=H*pulse;
-        const baseX=(W-dw)/2,baseY=(H-dh)/2;
+        // Keep the complete image locked to the frame so no question/options are cropped.
+        // Glitch styling is decorative only: thin scan lines and short RGB streaks stay in margins.
         ctx.fillStyle='#07152d';ctx.fillRect(0,0,W,H);
-        const slices=8,sh=H/slices,phase=(t*3.2)%1;
-        for(let j=0;j<slices;j++){
-          const dir=j%2===0?1:-1;
-          const kick=Math.sin(phase*Math.PI*2+j*0.72)*W*0.018*dir;
-          const shear=((j%2===0)?1:-1)*W*0.006;
-          ctx.save();ctx.beginPath();
-          const y0=j*sh, y1=(j+1)*sh;
-          ctx.moveTo(0,y0);ctx.lineTo(W,y0+shear);ctx.lineTo(W,y1+shear);ctx.lineTo(0,y1);ctx.closePath();ctx.clip();
-          ctx.drawImage(image,baseX+kick,baseY,dw,dh);ctx.restore();
+        ctx.drawImage(image,0,0,W,H);
+        // Very subtle scanline texture, low opacity so text remains fully legible.
+        ctx.save();ctx.globalAlpha=0.07;ctx.fillStyle='#06152b';
+        for(let y=0;y<H;y+=6)ctx.fillRect(0,y,W,1);
+        ctx.restore();
+        // Edge-only glitch streaks; never shift or slice the image itself.
+        const edgeBand=Math.max(8,Math.round(W*.035));
+        for(let i=0;i<4;i++){
+          const yy=(Math.floor((t*7+i*.237)%1*H));
+          const len=W*(.06+((i*7)%5)*.018);
+          const left=(i%2===0);
+          ctx.save();ctx.globalAlpha=.22;ctx.fillStyle=i%3===0?'#25e7ff':i%3===1?'#ff2f87':'#ffdf32';
+          ctx.fillRect(left?0:W-len,yy,len,Math.max(2,H*.0025));
+          ctx.restore();
         }
-        // Quick diagonal flashes between cuts for a punchy clip-like edit, never over the text.
-        if((t*6)%1<0.08){ctx.save();ctx.globalAlpha=0.12;ctx.fillStyle='#ffffff';ctx.beginPath();ctx.moveTo(W*.84,0);ctx.lineTo(W,H);ctx.lineTo(W*.94,H);ctx.lineTo(W*.78,0);ctx.closePath();ctx.fill();ctx.restore();}
+        // Brief RGB edge flashes at intervals; all motion stays outside the question area.
+        if((t*5)%1<0.045){ctx.save();ctx.globalAlpha=.16;ctx.fillStyle='#25e7ff';ctx.fillRect(0,0,edgeBand,H);ctx.fillStyle='#ff2f87';ctx.fillRect(W-edgeBand,0,edgeBand,H);ctx.restore();}
         // Soft fade at the start/end without obscuring the question for the main duration.
         const alpha=Math.min(1,t*5,(1-t)*5);ctx.fillStyle=`rgba(3,12,32,${Math.max(0,1-alpha)*.48})`;ctx.fillRect(0,0,W,H);
         // Small, semi-transparent thinking emojis travel only along the side margins.
