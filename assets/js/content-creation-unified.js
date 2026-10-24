@@ -584,14 +584,16 @@ Ganit Setu — MP Board Mathematics Learning`,
 
       // Reference-matched layout. Positions and dimensions use separate helpers;
       // never use X/Y (absolute positions) to calculate width or height.
-      // Chapter strip
+      // Chapter strip: centered horizontally, with breathing room from the top of the board.
+      // Keep all other question/option/comment coordinates unchanged.
+      const chapterW=764, chapterH=55, chapterX=(1100-chapterW)/2, chapterY=181;
       ctx.save();ctx.shadowColor='rgba(13,48,91,.14)';ctx.shadowBlur=S(5);ctx.shadowOffsetY=DY(2);
-      roundedRect(ctx,X(188),Y(165),DX(764),DY(55),S(18));ctx.fillStyle='#123b85';ctx.fill();ctx.restore();
+      roundedRect(ctx,X(chapterX),Y(chapterY),DX(chapterW),DY(chapterH),S(18));ctx.fillStyle='#123b85';ctx.fill();ctx.restore();
       ctx.fillStyle='#ffdf32';ctx.textAlign='center';ctx.textBaseline='middle';
       const chapterLine=`कक्षा ${currentQuestion.class_level}  •  अध्याय ${currentQuestion.chapter_number} — ${currentQuestion.chapter_name||''}`;
       const chapterFit=fitLines(ctx,chapterLine,DX(700),1,S(29),S(19));
       ctx.font=`800 ${chapterFit.size}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
-      ctx.fillText(chapterLine,X(570),Y(193),DX(710));
+      ctx.fillText(chapterLine,X(chapterX+chapterW/2),Y(chapterY+chapterH/2),DX(710));
 
       // Question card and yellow section label
       const qx=230,qy=270,qw=740,qh=193;
