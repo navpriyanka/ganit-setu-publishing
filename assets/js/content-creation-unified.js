@@ -753,13 +753,13 @@ Ganit Setu — MP Board Mathematics Learning`,
       // Soft, low-volume synthesized ambient tones; no external audio file or service required.
       try{
         audioCtx=new (window.AudioContext||window.webkitAudioContext)();const dest=audioCtx.createMediaStreamDestination();
-        const master=audioCtx.createGain();master.gain.value=0.20;master.connect(dest);
-        // Soft, audible instrumental-style arpeggio made locally with Web Audio (no external asset).
-        const notes=[523.25,659.25,783.99,659.25,587.33,698.46,880.00,698.46,523.25,659.25,783.99,987.77,880.00,783.99,659.25,587.33];
-        const t0=audioCtx.currentTime+0.08;
-        notes.forEach((hz,i)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sine';o.frequency.setValueAtTime(hz,t0+i*0.46);g.gain.setValueAtTime(0.0001,t0+i*0.46);g.gain.linearRampToValueAtTime(0.16,t0+i*0.46+0.035);g.gain.exponentialRampToValueAtTime(0.0001,t0+i*0.46+0.40);o.connect(g);g.connect(master);o.start(t0+i*0.46);o.stop(t0+i*0.46+0.42);oscillators.push(o);gainNodes.push(g)});
-        // A quiet sustained chord underneath the melody.
-        [261.63,329.63,392].forEach((hz,i)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='triangle';o.frequency.value=hz;g.gain.value=0.045;o.connect(g);g.connect(master);o.start();oscillators.push(o);gainNodes.push(g)});
+        const master=audioCtx.createGain();master.gain.value=0.48;master.connect(dest);
+        // Brighter, faster upbeat synthesized instrumental pattern; no external audio file required.
+        const notes=[659.25,783.99,987.77,783.99,698.46,880.00,1046.5,880.00,659.25,783.99,987.77,1174.66,1046.5,987.77,783.99,698.46,880.00,1046.5,1318.51,1046.5,987.77,1174.66,1396.91,1174.66,783.99,987.77,1174.66,1567.98,1396.91,1174.66,987.77,880.00];
+        const t0=audioCtx.currentTime+0.08,beat=0.23;
+        notes.forEach((hz,i)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='triangle';o.frequency.setValueAtTime(hz,t0+i*beat);g.gain.setValueAtTime(0.0001,t0+i*beat);g.gain.linearRampToValueAtTime(0.24,t0+i*beat+0.018);g.gain.exponentialRampToValueAtTime(0.0001,t0+i*beat+0.205);o.connect(g);g.connect(master);o.start(t0+i*beat);o.stop(t0+i*beat+0.22);oscillators.push(o);gainNodes.push(g)});
+        // Upbeat low rhythmic pulse underneath the melody.
+        [130.81,164.81,196.00,164.81,146.83,174.61,220.00,174.61].forEach((hz,i)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();const at=t0+i*0.92;o.type='sawtooth';o.frequency.setValueAtTime(hz,at);g.gain.setValueAtTime(0.0001,at);g.gain.linearRampToValueAtTime(0.07,at+0.025);g.gain.exponentialRampToValueAtTime(0.0001,at+0.72);o.connect(g);g.connect(master);o.start(at);o.stop(at+0.74);oscillators.push(o);gainNodes.push(g)});
         await audioCtx.resume();audioStream=dest.stream;
       }catch(e){console.warn('[Ganit Setu] Soft audio track unavailable:',e)}
       const stream=new MediaStream([...videoStream.getVideoTracks(),...(audioStream?audioStream.getAudioTracks():[])]);
@@ -772,11 +772,23 @@ Ganit Setu — MP Board Mathematics Learning`,
       const emojis=['🤔','💡','🧠','✍️','✨'];
       const draw=now=>{
         const t=Math.min(1,(now-start)/(duration*1000));ctx.clearRect(0,0,W,H);
-        // Very gentle scale pulse: entire question image stays inside frame at all times.
-        // More energetic but smooth motion: gentle zoom plus a quick, tiny side-to-side drift.
-        const pulse=1+0.025*Math.sin(t*Math.PI*6)+0.008*Math.sin(t*Math.PI*12),dw=W*pulse,dh=H*pulse;
-        const drift=Math.sin(t*Math.PI*4)*W*0.006;
-        ctx.fillStyle='#07152d';ctx.fillRect(0,0,W,H);ctx.drawImage(image,(W-dw)/2+drift,(H-dh)/2,dw,dh);
+        // Energetic zig-zag / clip-style motion: fast alternating diagonal slices reveal
+        // the same image with a small horizontal offset. The complete image remains readable.
+        const pulse=1+0.012*Math.sin(t*Math.PI*4),dw=W*pulse,dh=H*pulse;
+        const baseX=(W-dw)/2,baseY=(H-dh)/2;
+        ctx.fillStyle='#07152d';ctx.fillRect(0,0,W,H);
+        const slices=8,sh=H/slices,phase=(t*3.2)%1;
+        for(let j=0;j<slices;j++){
+          const dir=j%2===0?1:-1;
+          const kick=Math.sin(phase*Math.PI*2+j*0.72)*W*0.018*dir;
+          const shear=((j%2===0)?1:-1)*W*0.006;
+          ctx.save();ctx.beginPath();
+          const y0=j*sh, y1=(j+1)*sh;
+          ctx.moveTo(0,y0);ctx.lineTo(W,y0+shear);ctx.lineTo(W,y1+shear);ctx.lineTo(0,y1);ctx.closePath();ctx.clip();
+          ctx.drawImage(image,baseX+kick,baseY,dw,dh);ctx.restore();
+        }
+        // Quick diagonal flashes between cuts for a punchy clip-like edit, never over the text.
+        if((t*6)%1<0.08){ctx.save();ctx.globalAlpha=0.12;ctx.fillStyle='#ffffff';ctx.beginPath();ctx.moveTo(W*.84,0);ctx.lineTo(W,H);ctx.lineTo(W*.94,H);ctx.lineTo(W*.78,0);ctx.closePath();ctx.fill();ctx.restore();}
         // Soft fade at the start/end without obscuring the question for the main duration.
         const alpha=Math.min(1,t*5,(1-t)*5);ctx.fillStyle=`rgba(3,12,32,${Math.max(0,1-alpha)*.48})`;ctx.fillRect(0,0,W,H);
         // Small, semi-transparent thinking emojis travel only along the side margins.
@@ -785,7 +797,7 @@ Ganit Setu — MP Board Mathematics Learning`,
         if(t>0.78){const k=Math.min(1,(t-.78)/.10);ctx.save();ctx.globalAlpha=k;const bh=H*.105,by=H-bh;ctx.fillStyle='rgba(6,24,65,.88)';ctx.fillRect(0,by,W,bh);ctx.strokeStyle='#ffcf28';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,by);ctx.lineTo(W,by);ctx.stroke();ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#ffdf32';ctx.font=`900 ${Math.round(W*.040)}px Arial,sans-serif`;ctx.fillText('GANIT SETU  •  गणित सेतु',W/2,by+bh*.36);ctx.fillStyle='#ffffff';ctx.font=`800 ${Math.round(W*.031)}px Arial,sans-serif`;ctx.fillText('👍 Like  •  ↗ Share  •  🔔 Subscribe',W/2,by+bh*.73);ctx.restore();}
         if(t<1)raf=requestAnimationFrame(draw);else {drawFinalFrame();setTimeout(()=>{if(recorder&&recorder.state==='recording')recorder.stop()},80)}
       };
-      function drawFinalFrame(){ctx.clearRect(0,0,W,H);ctx.drawImage(image,0,0,W,H)}
+      function drawFinalFrame(){ /* preserve the final branded frame for the recorded video */ }
       recorder.start(200);raf=requestAnimationFrame(draw);
       await stopped;cancelAnimationFrame(raf);stream.getTracks().forEach(t=>t.stop());
       oscillators.forEach(o=>{try{o.stop()}catch(e){}});if(audioCtx)await audioCtx.close().catch(()=>{});
