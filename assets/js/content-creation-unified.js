@@ -587,60 +587,60 @@ Ganit Setu — MP Board Mathematics Learning`,
       // This prevents the old bug where an absolute-position transform was used as a box size.
       // Chapter strip
       ctx.save();ctx.shadowColor='rgba(13,48,91,.14)';ctx.shadowBlur=S(5);ctx.shadowOffsetY=S(2);
-      roundedRect(ctx,X(213),Y(169),X(670),Y(53),S(17));ctx.fillStyle='#123b85';ctx.fill();ctx.restore();
+      roundedRect(ctx,X(190),Y(169),X(780),Y(55),S(17));ctx.fillStyle='#123b85';ctx.fill();ctx.restore();
       ctx.fillStyle='#ffdf32';ctx.textAlign='center';ctx.textBaseline='middle';
       const chapterLine=`कक्षा ${currentQuestion.class_level}  •  अध्याय ${currentQuestion.chapter_number} — ${currentQuestion.chapter_name||''}`;
-      const chapterFit=fitLines(ctx,chapterLine,X(625),1,S(28),S(19));
+      const chapterFit=fitLines(ctx,chapterLine,X(735),1,S(30),S(20));
       ctx.font=`800 ${chapterFit.size}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
-      ctx.fillText(chapterLine,X(548),Y(196),X(630));
+      ctx.fillText(chapterLine,X(580),Y(196),X(735));
 
       // Question card and yellow section label
-      const qx=212,qy=247,qw=672,qh=175;
+      const qx=200,qy=250,qw=780,qh=205;
       ctx.save();ctx.shadowColor='rgba(15,44,80,.10)';ctx.shadowBlur=S(5);ctx.shadowOffsetY=S(2);
       roundedRect(ctx,X(qx),Y(qy),X(qw),Y(qh),S(24));ctx.fillStyle='#fffdf7';ctx.fill();ctx.restore();
       ctx.lineWidth=S(4);ctx.strokeStyle='#f5a623';roundedRect(ctx,X(qx),Y(qy),X(qw),Y(qh),S(24));ctx.stroke();
       ctx.save();ctx.shadowColor='rgba(245,166,35,.18)';ctx.shadowBlur=S(5);ctx.shadowOffsetY=S(2);
-      roundedRect(ctx,X(222),Y(216),X(318),Y(55),S(20));ctx.fillStyle='#ffdf32';ctx.fill();ctx.restore();
-      ctx.lineWidth=S(2.5);ctx.strokeStyle='#f5a623';roundedRect(ctx,X(222),Y(216),X(318),Y(55),S(20));ctx.stroke();
-      ctx.beginPath();ctx.arc(X(257),Y(243),S(19),0,Math.PI*2);ctx.fillStyle='#123b85';ctx.fill();
-      ctx.fillStyle='#ffdf32';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`900 ${S(25)}px Arial,sans-serif`;ctx.fillText('?',X(257),Y(243));
+      roundedRect(ctx,X(210),Y(220),X(350),Y(58),S(20));ctx.fillStyle='#ffdf32';ctx.fill();ctx.restore();
+      ctx.lineWidth=S(2.5);ctx.strokeStyle='#f5a623';roundedRect(ctx,X(210),Y(220),X(350),Y(58),S(20));ctx.stroke();
+      ctx.beginPath();ctx.arc(X(246),Y(249),S(20),0,Math.PI*2);ctx.fillStyle='#123b85';ctx.fill();
+      ctx.fillStyle='#ffdf32';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`900 ${S(25)}px Arial,sans-serif`;ctx.fillText('?',X(246),Y(249));
       ctx.fillStyle='#102b65';ctx.textAlign='left';ctx.textBaseline='middle';ctx.font=`900 ${S(25)}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
-      ctx.fillText('आज का गणित प्रश्न',X(286),Y(243),X(245));
-      const question=fitLines(ctx,currentQuestion.question_text,X(qw-62),3,S(39),S(27));
+      ctx.fillText('आज का गणित प्रश्न',X(275),Y(249),X(265));
+      const question=fitLines(ctx,currentQuestion.question_text,X(qw-80),3,S(42),S(28));
       ctx.font=`800 ${question.size}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
       ctx.fillStyle='#101d52';ctx.textAlign='center';ctx.textBaseline='middle';
       const qGap=S(5), qTotal=question.lines.length*(question.size+qGap)-qGap;
-      const qCenter=Y(qy+105);
-      question.lines.forEach((line,i)=>ctx.fillText(line,X(qx+qw/2),qCenter+(i-(question.lines.length-1)/2)*(question.size+qGap),X(qw-58)));
+      const qCenter=Y(qy+125);
+      question.lines.forEach((line,i)=>ctx.fillText(line,X(qx+qw/2),qCenter+(i-(question.lines.length-1)/2)*(question.size+qGap),X(qw-75)));
 
       // Two-column answer cards, with independent position and size scaling.
       const options=[
-        {label:'A',text:currentQuestion.option_a,x:217,y:440,color:'#0878ed',bg:'#e8f4ff'},
-        {label:'B',text:currentQuestion.option_b,x:568,y:440,color:'#ed1680',bg:'#fff0f7'},
-        {label:'C',text:currentQuestion.option_c,x:217,y:529,color:'#0b9b78',bg:'#e8fbf3'},
-        {label:'D',text:currentQuestion.option_d,x:568,y:529,color:'#f26b13',bg:'#fff4e7'}
+        {label:'A',text:currentQuestion.option_a,x:200,y:490,color:'#0878ed',bg:'#e8f4ff'},
+        {label:'B',text:currentQuestion.option_b,x:600,y:490,color:'#ed1680',bg:'#fff0f7'},
+        {label:'C',text:currentQuestion.option_c,x:200,y:590,color:'#0b9b78',bg:'#e8fbf3'},
+        {label:'D',text:currentQuestion.option_d,x:600,y:590,color:'#f26b13',bg:'#fff4e7'}
       ];
       for(const o of options){
-        const ox=o.x,oy=o.y,ow=329,oh=74;
+        const ox=o.x,oy=o.y,ow=(o.label==='A'||o.label==='C')?390:380,oh=82;
         ctx.save();ctx.shadowColor='rgba(13,48,91,.10)';ctx.shadowBlur=S(4);ctx.shadowOffsetY=S(2);
         roundedRect(ctx,X(ox),Y(oy),X(ow),Y(oh),S(19));ctx.fillStyle=o.bg;ctx.fill();ctx.restore();
         ctx.lineWidth=S(2.5);ctx.strokeStyle=o.color;roundedRect(ctx,X(ox),Y(oy),X(ow),Y(oh),S(19));ctx.stroke();
-        ctx.beginPath();ctx.arc(X(ox+42),Y(oy+oh/2),S(27),0,Math.PI*2);ctx.fillStyle=o.color;ctx.fill();
-        ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`800 ${S(34)}px Arial,sans-serif`;ctx.fillText(o.label,X(ox+42),Y(oy+oh/2+1));
-        const val=fitLines(ctx,String(o.text||''),X(ow-90),2,S(38),S(25));
+        ctx.beginPath();ctx.arc(X(ox+44),Y(oy+oh/2),S(29),0,Math.PI*2);ctx.fillStyle=o.color;ctx.fill();
+        ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`800 ${S(36)}px Arial,sans-serif`;ctx.fillText(o.label,X(ox+44),Y(oy+oh/2+1));
+        const val=fitLines(ctx,String(o.text||''),X(ow-100),2,S(40),S(25));
         ctx.textAlign='left';ctx.textBaseline='middle';ctx.font=`800 ${val.size}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;ctx.fillStyle='#101d52';
-        val.lines.forEach((line,i)=>ctx.fillText(line,X(ox+86),Y(oy+oh/2)+(i-(val.lines.length-1)/2)*(val.size+S(2)),X(ow-100)));
+        val.lines.forEach((line,i)=>ctx.fillText(line,X(ox+92),Y(oy+oh/2)+(i-(val.lines.length-1)/2)*(val.size+S(2)),X(ow-110)));
       }
 
       // Comment callout placed in the clear lower-right part of the board.
-      const cx=499,cy=627,cw=378,ch=107;
+      const cx=500,cy=790,cw=470,ch=145;
       ctx.save();ctx.shadowColor='rgba(13,48,91,.16)';ctx.shadowBlur=S(6);ctx.shadowOffsetY=S(2);
       roundedRect(ctx,X(cx),Y(cy),X(cw),Y(ch),S(23));ctx.fillStyle='#123b85';ctx.fill();ctx.restore();
       ctx.lineWidth=S(3.5);ctx.strokeStyle='#ffcf28';roundedRect(ctx,X(cx),Y(cy),X(cw),Y(ch),S(23));ctx.stroke();
-      ctx.beginPath();ctx.arc(X(cx+48),Y(cy+ch/2),S(30),0,Math.PI*2);ctx.fillStyle='#ffdf32';ctx.fill();
-      ctx.fillStyle='#123b85';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`900 ${S(24)}px Arial,sans-serif`;ctx.fillText('•••',X(cx+48),Y(cy+ch/2));
-      ctx.fillStyle='#fff';ctx.font=`900 ${S(29)}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;ctx.fillText('अपना उत्तर',X(cx+246),Y(cy+39),X(cw-105));
-      ctx.fillStyle='#ffdf32';ctx.font=`900 ${S(29)}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;ctx.fillText('कमेंट में लिखें',X(cx+246),Y(cy+73),X(cw-105));
+      ctx.beginPath();ctx.arc(X(cx+52),Y(cy+ch/2),S(32),0,Math.PI*2);ctx.fillStyle='#ffdf32';ctx.fill();
+      ctx.fillStyle='#123b85';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`900 ${S(24)}px Arial,sans-serif`;ctx.fillText('•••',X(cx+52),Y(cy+ch/2));
+      ctx.fillStyle='#fff';ctx.font=`900 ${S(29)}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;ctx.fillText('अपना उत्तर',X(cx+300),Y(cy+54),X(cw-125));
+      ctx.fillStyle='#ffdf32';ctx.font=`900 ${S(29)}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;ctx.fillText('कमेंट में लिखें',X(cx+300),Y(cy+91),X(cw-125));
 
       generatedImageData=c.toDataURL('image/png');
       $('imagePreview').src=generatedImageData;$('imagePreviewWrap').hidden=false;$('imageStatus').textContent='FIXED TEMPLATE • DESIGNED QUESTION INSERTED';
