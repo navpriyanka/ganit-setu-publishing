@@ -265,9 +265,11 @@ Ganit Setu — MP Board Mathematics Learning`,
     }
     content.hashtags=Array.isArray(content.hashtags)?content.hashtags.join(' '):(content.hashtags||'');
     content.keywords=Array.isArray(content.keywords)?content.keywords.join(', '):(content.keywords||'');
-    let mediaUrl=generatedImageUrl;
-    if(generatedImageData&&!mediaUrl){const up=await uploadFile(dataUrlToFile(generatedImageData,`Q${currentQuestion.id}_GANIT_SETU.jpg`),'images',currentQuestion.id);mediaUrl=generatedImageUrl=up.url;}
-    return {id:crypto.randomUUID(),question_id:(currentType==='post'? (platform==='facebook'?currentQuestion.id:Number(currentQuestion.id)) : currentQuestion.id),class_level:Number(currentQuestion.class_level),chapter_number:Number(currentQuestion.chapter_number),chapter_name:currentQuestion.chapter_name||'',platform,content_type:currentType,content,draft:content.post||content.caption||'',media_url:mediaUrl||'',video_url:videoUrl||'',created_at:new Date().toISOString(),status:'saved'};
+    // For converted-video publishing, reuse the already-generated Image Content Package
+    // (title/caption/description/hashtags) but send the VIDEO URL as media, not the still image.
+    let mediaUrl=publishingConvertedVideo?(videoUrl||imageConvertedVideoUrl||''):generatedImageUrl;
+    if(!publishingConvertedVideo&&generatedImageData&&!mediaUrl){const up=await uploadFile(dataUrlToFile(generatedImageData,`Q${currentQuestion.id}_GANIT_SETU.jpg`),'images',currentQuestion.id);mediaUrl=generatedImageUrl=up.url;}
+    return {id:crypto.randomUUID(),question_id:(currentType==='post'? (platform==='facebook'?currentQuestion.id:Number(currentQuestion.id)) : currentQuestion.id),class_level:Number(currentQuestion.class_level),chapter_number:Number(currentQuestion.chapter_number),chapter_name:currentQuestion.chapter_name||'',platform,content_type:publishingConvertedVideo?'reel':currentType,content,draft:content.post||content.caption||'',media_url:mediaUrl||'',video_url:(publishingConvertedVideo?(videoUrl||imageConvertedVideoUrl||''):(videoUrl||'')),created_at:new Date().toISOString(),status:'saved'};
   }
   async function publishOnePlatform(platform){
     const btn=document.querySelector(`[data-publish-platform="${platform}"]`);
@@ -653,7 +655,7 @@ Ganit Setu — MP Board Mathematics Learning`,
   const VIDEO_SCENE_FILES = [1,2,3,4,5].map(i=>`assets/video-templates/scene-${i}.mp4`);
   let generatedSceneOverlays=[];
   let finalVideoObjectUrl='';
-  let imageConvertedVideoUrl='', imageConvertedVideoBlob=null, imageVideoRecording=false;
+  let imageConvertedVideoUrl='', imageConvertedVideoBlob=null, imageVideoRecording=false, publishingConvertedVideo=false;
   function sceneTextLines(ctx,text,maxWidth,maxLines,fontSize,minFontSize){
     const result=fitLines(ctx,String(text||''),maxWidth,maxLines,fontSize,minFontSize);
     return result;
@@ -814,8 +816,12 @@ Ganit Setu — MP Board Mathematics Learning`,
     finally{if(audioCtx)await audioCtx.close().catch(()=>{});btn.disabled=false;btn.textContent='🎬 Convert Image to Video';imageVideoRecording=false;}
   }
   async function publishConvertedImageVideo(platform){
-    if(!imageConvertedVideoBlob&&!videoUrl)return msg('पहले वीडियो generate करें।','error');
-    // Reuse the established platform publishing path in video mode; restore the user's image mode afterwards.
+    if(!imageConvertedVideoBlob&&!videoUrl&&!imageConvertedVideoUrl)return msg('पहले वीडियो generate करें।','error');
+    if(!generatedPackage&&!readPackageFields().caption&&!readPackageFields().post&&!readPackageFields().title){
+      return msg('पहले “पूरा Content Package Generate करें” दबाएँ। वही फोटो वाला title, caption, description और hashtags वीडियो के साथ इस्तेमाल होंगे।','error');
+    }
+    // Reuse the existing image Content Package and publishing APIs, but pass the video
+    // as media. Keep the image-generation/publishing state intact after this action.
     const previousType=currentType,previousUrl=videoUrl;
     try{
       if(imageConvertedVideoBlob&&(!videoUrl||videoUrl.startsWith('blob:'))){
@@ -823,10 +829,13 @@ Ganit Setu — MP Board Mathematics Learning`,
         const file=new File([imageConvertedVideoBlob],`Q${currentQuestion?.id||'image'}_GANIT_SETU.${ext}`,{type});
         const uploaded=await uploadFile(file,'youtube',currentQuestion?.id||'image');videoUrl=uploaded.url;
       }
+      if(!videoUrl&&imageConvertedVideoUrl)videoUrl=imageConvertedVideoUrl;
+      if(!videoUrl||videoUrl.startsWith('blob:'))throw new Error('वीडियो का public HTTPS URL नहीं मिला। Supabase Storage upload जाँचें।');
+      publishingConvertedVideo=true;
       currentType='reel';
       await publishOnePlatform(platform);
     }catch(e){msg('Video publish शुरू नहीं हो पाया: '+(e.message||e),'error')}
-    finally{currentType=previousType;videoUrl=videoUrl||previousUrl;updateState();}
+    finally{publishingConvertedVideo=false;currentType=previousType;videoUrl=videoUrl||previousUrl;updateState();}
   }
 
   async function createFinalVideo(){
