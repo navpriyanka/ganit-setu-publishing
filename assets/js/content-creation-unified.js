@@ -653,6 +653,7 @@ Ganit Setu — MP Board Mathematics Learning`,
   const VIDEO_SCENE_FILES = [1,2,3,4,5].map(i=>`assets/video-templates/scene-${i}.mp4`);
   let generatedSceneOverlays=[];
   let finalVideoObjectUrl='';
+  let imageConvertedVideoUrl='', imageConvertedVideoBlob=null, imageVideoRecording=false;
   function sceneTextLines(ctx,text,maxWidth,maxLines,fontSize,minFontSize){
     const result=fitLines(ctx,String(text||''),maxWidth,maxLines,fontSize,minFontSize);
     return result;
@@ -726,6 +727,81 @@ Ganit Setu — MP Board Mathematics Learning`,
 
   function dataUrlToFile(dataUrl,name='ganit-setu-question.jpg'){const [meta,b64]=dataUrl.split(',');const bin=atob(b64);const arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);return new File([arr],name,{type:(meta.match(/data:(.*?);/)||[])[1]||'image/jpeg'})}
   async function uploadFile(file,folder,qid){const safe=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');const path=`content-packages/${folder}/${Date.now()}-Q${qid}-${safe}`;const {error}=await sb.storage.from('content-media').upload(path,file,{upsert:false,contentType:file.type||undefined,cacheControl:'3600'});if(error)throw new Error(`Asset upload failed: ${error.message}`);return {path,url:sb.storage.from('content-media').getPublicUrl(path).data.publicUrl}}
+  // Image Post -> short motion video. Kept separate from the existing 5-scene Reel workflow.
+  async function convertGeneratedImageToVideo(){
+    const btn=$('convertImageToVideo'),status=$('imageVideoStatus'),wrap=$('imageVideoPreviewWrap'),preview=$('imageVideoPreview');
+    if(!generatedImageData)return msg('पहले Image Post की इमेज generate करें।','error');
+    if(imageVideoRecording)return;
+    if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream)return msg('इस browser में video recording उपलब्ध नहीं है। नया Chrome/Edge इस्तेमाल करें।','error');
+    btn.disabled=true;imageVideoRecording=true;btn.textContent='⏳ वीडियो बनाया जा रहा है…';
+    let audioCtx=null,recorder=null,raf=0,oscillators=[],gainNodes=[];
+    try{
+      const image=new Image();image.src=generatedImageData;
+      await new Promise((resolve,reject)=>{if(image.complete&&image.naturalWidth)return resolve();image.onload=resolve;image.onerror=()=>reject(new Error('Generated image load नहीं हुई।'))});
+      const W=720,H=Math.round(720*image.naturalHeight/image.naturalWidth),duration=8;
+      const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;const ctx=canvas.getContext('2d');
+      const videoStream=canvas.captureStream(30);let audioStream=null;
+      // Soft, low-volume synthesized ambient tones; no external audio file or service required.
+      try{
+        audioCtx=new (window.AudioContext||window.webkitAudioContext)();const dest=audioCtx.createMediaStreamDestination();
+        const master=audioCtx.createGain();master.gain.value=0.035;master.connect(dest);
+        [261.63,329.63,392].forEach((hz,i)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sine';o.frequency.value=hz;g.gain.value=i===0?.32:.16;o.connect(g);g.connect(master);o.start();oscillators.push(o);gainNodes.push(g)});
+        await audioCtx.resume();audioStream=dest.stream;
+      }catch(e){console.warn('[Ganit Setu] Soft audio track unavailable:',e)}
+      const stream=new MediaStream([...videoStream.getVideoTracks(),...(audioStream?audioStream.getAudioTracks():[])]);
+      const candidates=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+      const mimeType=candidates.find(t=>MediaRecorder.isTypeSupported(t))||'';
+      recorder=new MediaRecorder(stream,mimeType?{mimeType}:undefined);const chunks=[];
+      recorder.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
+      const stopped=new Promise((resolve,reject)=>{recorder.onstop=resolve;recorder.onerror=e=>reject(e.error||new Error('Video recording failed'))});
+      const start=performance.now();
+      const emojis=['🤔','💡','🧠','✍️','✨'];
+      const draw=now=>{
+        const t=Math.min(1,(now-start)/(duration*1000));ctx.clearRect(0,0,W,H);
+        // Very gentle scale pulse: entire question image stays inside frame at all times.
+        const pulse=1+0.012*Math.sin(t*Math.PI*4),dw=W*pulse,dh=H*pulse;
+        ctx.fillStyle='#07152d';ctx.fillRect(0,0,W,H);ctx.drawImage(image,(W-dw)/2,(H-dh)/2,dw,dh);
+        // Soft fade at the start/end without obscuring the question for the main duration.
+        const alpha=Math.min(1,t*5,(1-t)*5);ctx.fillStyle=`rgba(3,12,32,${Math.max(0,1-alpha)*.48})`;ctx.fillRect(0,0,W,H);
+        // Small, semi-transparent thinking emojis travel only along the side margins.
+        emojis.forEach((em,i)=>{const phase=(t*1.1+i*.21)%1,y=H*(.12+phase*.76),left=i%2===0,x=left?W*.055+Math.sin(t*8+i)*5:W*.945+Math.sin(t*8+i)*5;ctx.save();ctx.globalAlpha=.34+.12*Math.sin(t*8+i);ctx.font=`${Math.round(W*.045)}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(em,x,y);ctx.restore()});
+        if(t<1)raf=requestAnimationFrame(draw);else {drawFinalFrame();setTimeout(()=>{if(recorder&&recorder.state==='recording')recorder.stop()},80)}
+      };
+      function drawFinalFrame(){ctx.clearRect(0,0,W,H);ctx.drawImage(image,0,0,W,H)}
+      recorder.start(200);raf=requestAnimationFrame(draw);
+      await stopped;cancelAnimationFrame(raf);stream.getTracks().forEach(t=>t.stop());
+      oscillators.forEach(o=>{try{o.stop()}catch(e){}});if(audioCtx)await audioCtx.close().catch(()=>{});
+      const actualType=recorder.mimeType||mimeType||(chunks[0]&&chunks[0].type)||'video/webm';
+      imageConvertedVideoBlob=new Blob(chunks,{type:actualType});if(!imageConvertedVideoBlob.size)throw new Error('वीडियो खाली बना। दोबारा कोशिश करें।');
+      if(imageConvertedVideoUrl)URL.revokeObjectURL(imageConvertedVideoUrl);imageConvertedVideoUrl=URL.createObjectURL(imageConvertedVideoBlob);
+      preview.src=imageConvertedVideoUrl;preview.load();wrap.hidden=false;
+      const ext=actualType.includes('mp4')?'mp4':'webm';
+      const dl=$('imageVideoDownload');if(dl){dl.href=imageConvertedVideoUrl;dl.download=`GANIT_SETU_Q${currentQuestion?.id||'image'}_animated.${ext}`;dl.hidden=false;}
+      // Upload is best-effort only; image generation/publishing is not blocked if storage is unavailable.
+      try{const file=new File([imageConvertedVideoBlob],`Q${currentQuestion?.id||'image'}_GANIT_SETU.${ext}`,{type:actualType});const hosted=await uploadFile(file,'youtube',currentQuestion?.id||'image');imageConvertedVideoUrl=hosted.url;videoUrl=hosted.url;preview.src=hosted.url;}
+      catch(uploadError){videoUrl=imageConvertedVideoUrl;console.warn('[Ganit Setu] Animated video is available locally; upload failed:',uploadError)}
+      status.textContent=`✅ वीडियो तैयार • ${ext.toUpperCase()} • 8 सेकंड${actualType.includes('mp4')?'':' (इस browser ने MP4 recording support नहीं की, इसलिए WebM बना है)'}${videoUrl!==imageConvertedVideoUrl?'':' • लोकल preview उपलब्ध'}`;
+      const pub=$('imageVideoPublishButtons');if(pub)pub.hidden=false;
+      msg('इमेज का animated video तैयार है। पहले preview देखकर publish करें।','success');
+    }catch(e){console.error('[Ganit Setu] Image-to-video failed:',e);status.textContent='वीडियो नहीं बन पाया: '+(e.message||e);msg('Image-to-video में समस्या: '+(e.message||e),'error')}
+    finally{if(audioCtx)await audioCtx.close().catch(()=>{});btn.disabled=false;btn.textContent='🎬 Convert Image to Video';imageVideoRecording=false;}
+  }
+  async function publishConvertedImageVideo(platform){
+    if(!imageConvertedVideoBlob&&!videoUrl)return msg('पहले वीडियो generate करें।','error');
+    // Reuse the established platform publishing path in video mode; restore the user's image mode afterwards.
+    const previousType=currentType,previousUrl=videoUrl;
+    try{
+      if(imageConvertedVideoBlob&&(!videoUrl||videoUrl.startsWith('blob:'))){
+        const type=imageConvertedVideoBlob.type||'video/webm';const ext=type.includes('mp4')?'mp4':'webm';
+        const file=new File([imageConvertedVideoBlob],`Q${currentQuestion?.id||'image'}_GANIT_SETU.${ext}`,{type});
+        const uploaded=await uploadFile(file,'youtube',currentQuestion?.id||'image');videoUrl=uploaded.url;
+      }
+      currentType='reel';
+      await publishOnePlatform(platform);
+    }catch(e){msg('Video publish शुरू नहीं हो पाया: '+(e.message||e),'error')}
+    finally{currentType=previousType;videoUrl=videoUrl||previousUrl;updateState();}
+  }
+
   async function createFinalVideo(){
     const btn=$('createVideo'),status=$('videoStatus');
     if(!currentQuestion)return msg('पहले Reel / Video के लिए Question चुनें।','error');
@@ -989,7 +1065,7 @@ Ganit Setu — MP Board Mathematics Learning`,
     document.querySelectorAll('[data-platform]').forEach(b=>b.onclick=e=>{if(e.target.closest('.platform-connect'))return;msg('Platform चुनने की जरूरत नहीं है—कंटेंट चारों प्लेटफॉर्म के लिए एक साथ तैयार होगा।','info')});
     document.querySelectorAll('[data-type]').forEach(b=>b.onclick=()=>switchContentType(b.dataset.type));
     document.querySelectorAll('.platform-connect').forEach(b=>b.onclick=e=>{e.stopPropagation();connectPlatform(b.dataset.connect)});
-    $('generateFiveSceneImages')?.addEventListener('click',makeFiveSceneImages);$('createVideo')?.addEventListener('click',createFinalVideo);$('generatePost').onclick=generatePost;if($('generateImageContent'))$('generateImageContent').onclick=generateImageContentPackage;$('generateImage').onclick=generateImage;$('savePackage').onclick=savePackage;
+    $('generateFiveSceneImages')?.addEventListener('click',makeFiveSceneImages);$('createVideo')?.addEventListener('click',createFinalVideo);$('generatePost').onclick=generatePost;if($('generateImageContent'))$('generateImageContent').onclick=generateImageContentPackage;$('generateImage').onclick=generateImage;$('convertImageToVideo')?.addEventListener('click',convertGeneratedImageToVideo);document.querySelectorAll('[data-image-video-publish]').forEach(b=>b.addEventListener('click',()=>publishConvertedImageVideo(b.dataset.imageVideoPublish)));$('savePackage').onclick=savePackage;
     $('markAsPublishedTemporary')?.addEventListener('click',()=>{msg('Mark as Published बटन अभी अस्थायी है। अभी यह केवल UI/टेस्ट के लिए है—Supabase से कोई इमेज या वीडियो डिलीट नहीं होगा। अगली स्टेज में इसे वास्तविक cleanup से जोड़ा जाएगा।','info')});
     $('previewPackage').onclick=()=>{const p=readPackageFields();$('previewQuestion').textContent=currentQuestion?`Q${currentQuestion.id}`:'—';$('previewText').textContent=JSON.stringify(p,null,2);$('previewImage').src=generatedImageData||generatedImageUrl||'';$('previewModal').hidden=false};$('closePreview').onclick=()=>$('previewModal').hidden=true;
     window.addEventListener('message',e=>{if(e.data?.type==='GS_VIDEO_READY'&&currentQuestion&&String(e.data.question_id)===String(currentQuestion.id)){videoUrl=e.data.video_url||'';$('videoStatus').textContent='✅ Final Video Ready';$('videoLink').href=videoUrl;$('videoLink').hidden=!videoUrl;msg('Final video तैयार है। अब Save करके platform publish कर सकते हैं।','success')}})
