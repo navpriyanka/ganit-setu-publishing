@@ -747,19 +747,19 @@ Ganit Setu — MP Board Mathematics Learning`,
       const image=new Image();image.crossOrigin='anonymous';image.src=imageSource;
       await new Promise((resolve,reject)=>{if(image.complete&&image.naturalWidth)return resolve();image.onload=resolve;image.onerror=()=>reject(new Error('Generated image load नहीं हुई।'))});
       if(!generatedImageData&&imageSource.startsWith('data:'))generatedImageData=imageSource;
-      const W=720,H=Math.round(720*image.naturalHeight/image.naturalWidth),duration=8;
+      const W=720,H=Math.round(720*image.naturalHeight/image.naturalWidth),duration=10;
       const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;const ctx=canvas.getContext('2d');
       const videoStream=canvas.captureStream(30);let audioStream=null;
       // Soft, low-volume synthesized ambient tones; no external audio file or service required.
       try{
         audioCtx=new (window.AudioContext||window.webkitAudioContext)();const dest=audioCtx.createMediaStreamDestination();
-        const master=audioCtx.createGain();master.gain.value=0.48;master.connect(dest);
+        const master=audioCtx.createGain();master.gain.value=0.78;master.connect(dest);
         // Brighter, faster upbeat synthesized instrumental pattern; no external audio file required.
         const notes=[659.25,783.99,987.77,783.99,698.46,880.00,1046.5,880.00,659.25,783.99,987.77,1174.66,1046.5,987.77,783.99,698.46,880.00,1046.5,1318.51,1046.5,987.77,1174.66,1396.91,1174.66,783.99,987.77,1174.66,1567.98,1396.91,1174.66,987.77,880.00];
         const t0=audioCtx.currentTime+0.08,beat=0.23;
-        notes.forEach((hz,i)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='triangle';o.frequency.setValueAtTime(hz,t0+i*beat);g.gain.setValueAtTime(0.0001,t0+i*beat);g.gain.linearRampToValueAtTime(0.24,t0+i*beat+0.018);g.gain.exponentialRampToValueAtTime(0.0001,t0+i*beat+0.205);o.connect(g);g.connect(master);o.start(t0+i*beat);o.stop(t0+i*beat+0.22);oscillators.push(o);gainNodes.push(g)});
+        notes.forEach((hz,i)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='triangle';o.frequency.setValueAtTime(hz,t0+i*beat);g.gain.setValueAtTime(0.0001,t0+i*beat);g.gain.linearRampToValueAtTime(0.34,t0+i*beat+0.018);g.gain.exponentialRampToValueAtTime(0.0001,t0+i*beat+0.205);o.connect(g);g.connect(master);o.start(t0+i*beat);o.stop(t0+i*beat+0.22);oscillators.push(o);gainNodes.push(g)});
         // Upbeat low rhythmic pulse underneath the melody.
-        [130.81,164.81,196.00,164.81,146.83,174.61,220.00,174.61].forEach((hz,i)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();const at=t0+i*0.92;o.type='sawtooth';o.frequency.setValueAtTime(hz,at);g.gain.setValueAtTime(0.0001,at);g.gain.linearRampToValueAtTime(0.07,at+0.025);g.gain.exponentialRampToValueAtTime(0.0001,at+0.72);o.connect(g);g.connect(master);o.start(at);o.stop(at+0.74);oscillators.push(o);gainNodes.push(g)});
+        [130.81,164.81,196.00,164.81,146.83,174.61,220.00,174.61].forEach((hz,i)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();const at=t0+i*0.92;o.type='sawtooth';o.frequency.setValueAtTime(hz,at);g.gain.setValueAtTime(0.0001,at);g.gain.linearRampToValueAtTime(0.12,at+0.025);g.gain.exponentialRampToValueAtTime(0.0001,at+0.72);o.connect(g);g.connect(master);o.start(at);o.stop(at+0.74);oscillators.push(o);gainNodes.push(g)});
         await audioCtx.resume();audioStream=dest.stream;
       }catch(e){console.warn('[Ganit Setu] Soft audio track unavailable:',e)}
       const stream=new MediaStream([...videoStream.getVideoTracks(),...(audioStream?audioStream.getAudioTracks():[])]);
@@ -793,8 +793,8 @@ Ganit Setu — MP Board Mathematics Learning`,
         const alpha=Math.min(1,t*5,(1-t)*5);ctx.fillStyle=`rgba(3,12,32,${Math.max(0,1-alpha)*.48})`;ctx.fillRect(0,0,W,H);
         // Small, semi-transparent thinking emojis travel only along the side margins.
         emojis.forEach((em,i)=>{const phase=(t*1.7+i*.21)%1,y=H*(.12+phase*.76),left=i%2===0,x=left?W*.055+Math.sin(t*12+i)*7:W*.945+Math.sin(t*12+i)*7;ctx.save();ctx.globalAlpha=.42+.18*Math.sin(t*12+i);ctx.font=`${Math.round(W*.047)}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(em,x,y);ctx.restore()});
-        // Branded end card in the final 1.7 seconds; keep it in a bottom strip so the question stays readable.
-        if(t>0.78){const k=Math.min(1,(t-.78)/.10);ctx.save();ctx.globalAlpha=k;const bh=H*.105,by=H-bh;ctx.fillStyle='rgba(6,24,65,.88)';ctx.fillRect(0,by,W,bh);ctx.strokeStyle='#ffcf28';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,by);ctx.lineTo(W,by);ctx.stroke();ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#ffdf32';ctx.font=`900 ${Math.round(W*.040)}px Arial,sans-serif`;ctx.fillText('GANIT SETU  •  गणित सेतु',W/2,by+bh*.36);ctx.fillStyle='#ffffff';ctx.font=`800 ${Math.round(W*.031)}px Arial,sans-serif`;ctx.fillText('👍 Like  •  ↗ Share  •  🔔 Subscribe',W/2,by+bh*.73);ctx.restore();}
+        // Branded end card in the final 3 seconds; keep it in a bottom strip so the question stays readable.
+        if(t>0.70){const k=Math.min(1,(t-.70)/.10);ctx.save();ctx.globalAlpha=k;const bh=H*.105,by=H-bh;ctx.fillStyle='rgba(6,24,65,.88)';ctx.fillRect(0,by,W,bh);ctx.strokeStyle='#ffcf28';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,by);ctx.lineTo(W,by);ctx.stroke();ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#ffdf32';ctx.font=`900 ${Math.round(W*.040)}px Arial,sans-serif`;ctx.fillText('GANIT SETU  •  गणित सेतु',W/2,by+bh*.36);ctx.fillStyle='#ffffff';ctx.font=`800 ${Math.round(W*.031)}px Arial,sans-serif`;ctx.fillText('👍 Like  •  ↗ Share  •  🔔 Subscribe  •  Follow for more videos',W/2,by+bh*.73);ctx.restore();}
         if(t<1)raf=requestAnimationFrame(draw);else {drawFinalFrame();setTimeout(()=>{if(recorder&&recorder.state==='recording')recorder.stop()},80)}
       };
       function drawFinalFrame(){ /* preserve the final branded frame for the recorded video */ }
@@ -810,7 +810,7 @@ Ganit Setu — MP Board Mathematics Learning`,
       // Upload is best-effort only; image generation/publishing is not blocked if storage is unavailable.
       try{const file=new File([imageConvertedVideoBlob],`Q${currentQuestion?.id||'image'}_GANIT_SETU.${ext}`,{type:actualType});const hosted=await uploadFile(file,'youtube',currentQuestion?.id||'image');imageConvertedVideoUrl=hosted.url;videoUrl=hosted.url;preview.src=hosted.url;}
       catch(uploadError){videoUrl=imageConvertedVideoUrl;console.warn('[Ganit Setu] Animated video is available locally; upload failed:',uploadError)}
-      status.textContent=`✅ वीडियो तैयार • ${ext.toUpperCase()} • 8 सेकंड${actualType.includes('mp4')?'':' (इस browser ने MP4 recording support नहीं की, इसलिए WebM बना है)'}${videoUrl!==imageConvertedVideoUrl?'':' • लोकल preview उपलब्ध'}`;
+      status.textContent=`✅ वीडियो तैयार • ${ext.toUpperCase()} • 10 सेकंड${actualType.includes('mp4')?'':' (इस browser ने MP4 recording support नहीं की, इसलिए WebM बना है)'}${videoUrl!==imageConvertedVideoUrl?'':' • लोकल preview उपलब्ध'}`;
       const pub=$('imageVideoPublishButtons');if(pub)pub.hidden=false;
       msg('इमेज का animated video तैयार है। पहले preview देखकर publish करें।','success');
     }catch(e){console.error('[Ganit Setu] Image-to-video failed:',e);status.textContent='वीडियो नहीं बन पाया: '+(e.message||e);msg('Image-to-video में समस्या: '+(e.message||e),'error')}
