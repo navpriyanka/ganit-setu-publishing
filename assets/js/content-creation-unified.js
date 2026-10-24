@@ -753,8 +753,13 @@ Ganit Setu — MP Board Mathematics Learning`,
       // Soft, low-volume synthesized ambient tones; no external audio file or service required.
       try{
         audioCtx=new (window.AudioContext||window.webkitAudioContext)();const dest=audioCtx.createMediaStreamDestination();
-        const master=audioCtx.createGain();master.gain.value=0.035;master.connect(dest);
-        [261.63,329.63,392].forEach((hz,i)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sine';o.frequency.value=hz;g.gain.value=i===0?.32:.16;o.connect(g);g.connect(master);o.start();oscillators.push(o);gainNodes.push(g)});
+        const master=audioCtx.createGain();master.gain.value=0.20;master.connect(dest);
+        // Soft, audible instrumental-style arpeggio made locally with Web Audio (no external asset).
+        const notes=[523.25,659.25,783.99,659.25,587.33,698.46,880.00,698.46,523.25,659.25,783.99,987.77,880.00,783.99,659.25,587.33];
+        const t0=audioCtx.currentTime+0.08;
+        notes.forEach((hz,i)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sine';o.frequency.setValueAtTime(hz,t0+i*0.46);g.gain.setValueAtTime(0.0001,t0+i*0.46);g.gain.linearRampToValueAtTime(0.16,t0+i*0.46+0.035);g.gain.exponentialRampToValueAtTime(0.0001,t0+i*0.46+0.40);o.connect(g);g.connect(master);o.start(t0+i*0.46);o.stop(t0+i*0.46+0.42);oscillators.push(o);gainNodes.push(g)});
+        // A quiet sustained chord underneath the melody.
+        [261.63,329.63,392].forEach((hz,i)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='triangle';o.frequency.value=hz;g.gain.value=0.045;o.connect(g);g.connect(master);o.start();oscillators.push(o);gainNodes.push(g)});
         await audioCtx.resume();audioStream=dest.stream;
       }catch(e){console.warn('[Ganit Setu] Soft audio track unavailable:',e)}
       const stream=new MediaStream([...videoStream.getVideoTracks(),...(audioStream?audioStream.getAudioTracks():[])]);
@@ -768,12 +773,16 @@ Ganit Setu — MP Board Mathematics Learning`,
       const draw=now=>{
         const t=Math.min(1,(now-start)/(duration*1000));ctx.clearRect(0,0,W,H);
         // Very gentle scale pulse: entire question image stays inside frame at all times.
-        const pulse=1+0.012*Math.sin(t*Math.PI*4),dw=W*pulse,dh=H*pulse;
-        ctx.fillStyle='#07152d';ctx.fillRect(0,0,W,H);ctx.drawImage(image,(W-dw)/2,(H-dh)/2,dw,dh);
+        // More energetic but smooth motion: gentle zoom plus a quick, tiny side-to-side drift.
+        const pulse=1+0.025*Math.sin(t*Math.PI*6)+0.008*Math.sin(t*Math.PI*12),dw=W*pulse,dh=H*pulse;
+        const drift=Math.sin(t*Math.PI*4)*W*0.006;
+        ctx.fillStyle='#07152d';ctx.fillRect(0,0,W,H);ctx.drawImage(image,(W-dw)/2+drift,(H-dh)/2,dw,dh);
         // Soft fade at the start/end without obscuring the question for the main duration.
         const alpha=Math.min(1,t*5,(1-t)*5);ctx.fillStyle=`rgba(3,12,32,${Math.max(0,1-alpha)*.48})`;ctx.fillRect(0,0,W,H);
         // Small, semi-transparent thinking emojis travel only along the side margins.
-        emojis.forEach((em,i)=>{const phase=(t*1.1+i*.21)%1,y=H*(.12+phase*.76),left=i%2===0,x=left?W*.055+Math.sin(t*8+i)*5:W*.945+Math.sin(t*8+i)*5;ctx.save();ctx.globalAlpha=.34+.12*Math.sin(t*8+i);ctx.font=`${Math.round(W*.045)}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(em,x,y);ctx.restore()});
+        emojis.forEach((em,i)=>{const phase=(t*1.7+i*.21)%1,y=H*(.12+phase*.76),left=i%2===0,x=left?W*.055+Math.sin(t*12+i)*7:W*.945+Math.sin(t*12+i)*7;ctx.save();ctx.globalAlpha=.42+.18*Math.sin(t*12+i);ctx.font=`${Math.round(W*.047)}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(em,x,y);ctx.restore()});
+        // Branded end card in the final 1.7 seconds; keep it in a bottom strip so the question stays readable.
+        if(t>0.78){const k=Math.min(1,(t-.78)/.10);ctx.save();ctx.globalAlpha=k;const bh=H*.105,by=H-bh;ctx.fillStyle='rgba(6,24,65,.88)';ctx.fillRect(0,by,W,bh);ctx.strokeStyle='#ffcf28';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,by);ctx.lineTo(W,by);ctx.stroke();ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#ffdf32';ctx.font=`900 ${Math.round(W*.040)}px Arial,sans-serif`;ctx.fillText('GANIT SETU  •  गणित सेतु',W/2,by+bh*.36);ctx.fillStyle='#ffffff';ctx.font=`800 ${Math.round(W*.031)}px Arial,sans-serif`;ctx.fillText('👍 Like  •  ↗ Share  •  🔔 Subscribe',W/2,by+bh*.73);ctx.restore();}
         if(t<1)raf=requestAnimationFrame(draw);else {drawFinalFrame();setTimeout(()=>{if(recorder&&recorder.state==='recording')recorder.stop()},80)}
       };
       function drawFinalFrame(){ctx.clearRect(0,0,W,H);ctx.drawImage(image,0,0,W,H)}
