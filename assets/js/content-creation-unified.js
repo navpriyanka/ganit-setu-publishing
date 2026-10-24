@@ -772,30 +772,24 @@ Ganit Setu — MP Board Mathematics Learning`,
       const emojis=['🤔','💡','🧠','✍️','✨'];
       const draw=now=>{
         const t=Math.min(1,(now-start)/(duration*1000));ctx.clearRect(0,0,W,H);
-        // Keep the complete image locked to the frame so no question/options are cropped.
-        // Glitch styling is decorative only: thin scan lines and short RGB streaks stay in margins.
+        // Clean, classroom-safe motion: keep the entire question image pixel-stable.
+        // No glitch slices, scanlines, side emojis, or moving overlays over the text.
         ctx.fillStyle='#07152d';ctx.fillRect(0,0,W,H);
         ctx.drawImage(image,0,0,W,H);
-        // Very subtle scanline texture, low opacity so text remains fully legible.
-        ctx.save();ctx.globalAlpha=0.07;ctx.fillStyle='#06152b';
-        for(let y=0;y<H;y+=6)ctx.fillRect(0,y,W,1);
-        ctx.restore();
-        // Edge-only glitch streaks; never shift or slice the image itself.
-        const edgeBand=Math.max(8,Math.round(W*.035));
-        for(let i=0;i<4;i++){
-          const yy=(Math.floor((t*7+i*.237)%1*H));
-          const len=W*(.06+((i*7)%5)*.018);
-          const left=(i%2===0);
-          ctx.save();ctx.globalAlpha=.22;ctx.fillStyle=i%3===0?'#25e7ff':i%3===1?'#ff2f87':'#ffdf32';
-          ctx.fillRect(left?0:W-len,yy,len,Math.max(2,H*.0025));
-          ctx.restore();
-        }
-        // Brief RGB edge flashes at intervals; all motion stays outside the question area.
-        if((t*5)%1<0.045){ctx.save();ctx.globalAlpha=.16;ctx.fillStyle='#25e7ff';ctx.fillRect(0,0,edgeBand,H);ctx.fillStyle='#ff2f87';ctx.fillRect(W-edgeBand,0,edgeBand,H);ctx.restore();}
-        // Soft fade at the start/end without obscuring the question for the main duration.
-        const alpha=Math.min(1,t*5,(1-t)*5);ctx.fillStyle=`rgba(3,12,32,${Math.max(0,1-alpha)*.48})`;ctx.fillRect(0,0,W,H);
-        // Small, semi-transparent thinking emojis travel only along the side margins.
-        emojis.forEach((em,i)=>{const phase=(t*1.7+i*.21)%1,y=H*(.12+phase*.76),left=i%2===0,x=left?W*.055+Math.sin(t*12+i)*7:W*.945+Math.sin(t*12+i)*7;ctx.save();ctx.globalAlpha=.42+.18*Math.sin(t*12+i);ctx.font=`${Math.round(W*.047)}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(em,x,y);ctx.restore()});
+        // Premium thin frame glow with a slow travelling light sweep; stays on the outer border.
+        const frame=Math.max(3,Math.round(W*.008));
+        ctx.save();ctx.lineWidth=frame;ctx.strokeStyle='rgba(255,207,40,.92)';ctx.strokeRect(frame/2,frame/2,W-frame,H-frame);
+        const sweep=(t*1.35)%1, sx=sweep*W;
+        const grad=ctx.createLinearGradient(sx-W*.12,0,sx+W*.12,0);
+        grad.addColorStop(0,'rgba(37,231,255,0)');grad.addColorStop(.5,'rgba(37,231,255,.85)');grad.addColorStop(1,'rgba(37,231,255,0)');
+        ctx.strokeStyle=grad;ctx.lineWidth=frame*1.25;ctx.strokeRect(frame,frame,W-frame*2,H-frame*2);ctx.restore();
+        // Gentle corner sparkle pulses only, without moving or covering any text.
+        const pulse=.35+.35*(.5+.5*Math.sin(t*Math.PI*6));
+        ctx.save();ctx.globalAlpha=pulse;ctx.fillStyle='#ffdf32';
+        const dot=Math.max(3,Math.round(W*.009));
+        [[frame*2,frame*2],[W-frame*2,frame*2],[frame*2,H-frame*2],[W-frame*2,H-frame*2]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,dot,0,Math.PI*2);ctx.fill()});ctx.restore();
+        // Soft fade only at the beginning and end; full question remains unchanged in between.
+        const alpha=Math.min(1,t*5,(1-t)*5);ctx.fillStyle=`rgba(3,12,32,${Math.max(0,1-alpha)*.30})`;ctx.fillRect(0,0,W,H);
         // Branded end card in the final 3 seconds; keep it in a bottom strip so the question stays readable.
         if(t>0.70){const k=Math.min(1,(t-.70)/.10);ctx.save();ctx.globalAlpha=k;const bh=H*.105,by=H-bh;ctx.fillStyle='rgba(6,24,65,.88)';ctx.fillRect(0,by,W,bh);ctx.strokeStyle='#ffcf28';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,by);ctx.lineTo(W,by);ctx.stroke();ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#ffdf32';ctx.font=`900 ${Math.round(W*.040)}px Arial,sans-serif`;ctx.fillText('GANIT SETU  •  गणित सेतु',W/2,by+bh*.36);ctx.fillStyle='#ffffff';ctx.font=`800 ${Math.round(W*.031)}px Arial,sans-serif`;ctx.fillText('👍 Like  •  ↗ Share  •  🔔 Subscribe  •  Follow for more videos',W/2,by+bh*.73);ctx.restore();}
         if(t<1)raf=requestAnimationFrame(draw);else {drawFinalFrame();setTimeout(()=>{if(recorder&&recorder.state==='recording')recorder.stop()},80)}
