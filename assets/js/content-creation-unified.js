@@ -544,10 +544,10 @@ Ganit Setu — MP Board Mathematics Learning`,
   function wrapText(ctx,text,maxWidth){const out=[];for(const para of String(text||'').split(/\n/)){let line='';for(const word of para.trim().split(/\s+/)){const test=line?line+' '+word:word;if(ctx.measureText(test).width<=maxWidth||!line)line=test;else{out.push(line);line=word}}if(line)out.push(line);else out.push('')}return out}
   async function loadImg(src){const im=new Image();if(!src.startsWith('data:'))im.crossOrigin='anonymous';await new Promise((res,rej)=>{im.onload=res;im.onerror=()=>rej(new Error('Image load नहीं हुई।'));im.src=src});return im}
   // IMAGE MODE: fixed blank template + programmatic text only.
-  // No AI image generation is used here. Put the approved blank template at:
-  // assets/images/content-post-template.png
+  // Keep the uploaded master template unchanged. All layout coordinates below are
+  // authored on the approved 1100x1375 reference and scaled to the loaded image.
   const IMAGE_TEMPLATE_URL=new URL('assets/images/content-post-template.png',document.baseURI).href;
-  const IMAGE_TEMPLATE_CONFIG={width:1122,height:1402};
+  const IMAGE_TEMPLATE_CONFIG={width:1229,height:1536};
 
   function fitLines(ctx,text,maxWidth,maxLines,fontSize,minFontSize=20){
     let size=fontSize, lines=[];
@@ -578,73 +578,72 @@ Ganit Setu — MP Board Mathematics Learning`,
       const template=await loadImg(IMAGE_TEMPLATE_URL);
       const W=template.naturalWidth||IMAGE_TEMPLATE_CONFIG.width;
       const H=template.naturalHeight||IMAGE_TEMPLATE_CONFIG.height;
-      const sx=W/1122, sy=H/1402, S=n=>n*Math.min(sx,sy), X=n=>n*sx, Y=n=>n*sy;
+      const sx=W/1100, sy=H/1375, S=n=>n*Math.min(sx,sy), X=n=>n*sx, Y=n=>n*sy, DX=n=>n*sx, DY=n=>n*sy;
       const c=document.createElement('canvas');c.width=W;c.height=H;const ctx=c.getContext('2d');
       ctx.drawImage(template,0,0,W,H);
 
-      // Layout coordinates are defined directly on the 1122x1402 approved template.
-      // IMPORTANT: X/Y convert positions only; widths/heights use X/Y on lengths from zero.
-      // This prevents the old bug where an absolute-position transform was used as a box size.
+      // Reference-matched layout. Positions and dimensions use separate helpers;
+      // never use X/Y (absolute positions) to calculate width or height.
       // Chapter strip
-      ctx.save();ctx.shadowColor='rgba(13,48,91,.14)';ctx.shadowBlur=S(5);ctx.shadowOffsetY=S(2);
-      roundedRect(ctx,X(190),Y(169),X(780),Y(55),S(17));ctx.fillStyle='#123b85';ctx.fill();ctx.restore();
+      ctx.save();ctx.shadowColor='rgba(13,48,91,.14)';ctx.shadowBlur=S(5);ctx.shadowOffsetY=DY(2);
+      roundedRect(ctx,X(188),Y(165),DX(764),DY(55),S(18));ctx.fillStyle='#123b85';ctx.fill();ctx.restore();
       ctx.fillStyle='#ffdf32';ctx.textAlign='center';ctx.textBaseline='middle';
       const chapterLine=`कक्षा ${currentQuestion.class_level}  •  अध्याय ${currentQuestion.chapter_number} — ${currentQuestion.chapter_name||''}`;
-      const chapterFit=fitLines(ctx,chapterLine,X(735),1,S(30),S(20));
+      const chapterFit=fitLines(ctx,chapterLine,DX(700),1,S(29),S(19));
       ctx.font=`800 ${chapterFit.size}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
-      ctx.fillText(chapterLine,X(580),Y(196),X(735));
+      ctx.fillText(chapterLine,X(570),Y(193),DX(710));
 
       // Question card and yellow section label
-      const qx=200,qy=250,qw=780,qh=205;
-      ctx.save();ctx.shadowColor='rgba(15,44,80,.10)';ctx.shadowBlur=S(5);ctx.shadowOffsetY=S(2);
-      roundedRect(ctx,X(qx),Y(qy),X(qw),Y(qh),S(24));ctx.fillStyle='#fffdf7';ctx.fill();ctx.restore();
-      ctx.lineWidth=S(4);ctx.strokeStyle='#f5a623';roundedRect(ctx,X(qx),Y(qy),X(qw),Y(qh),S(24));ctx.stroke();
-      ctx.save();ctx.shadowColor='rgba(245,166,35,.18)';ctx.shadowBlur=S(5);ctx.shadowOffsetY=S(2);
-      roundedRect(ctx,X(210),Y(220),X(350),Y(58),S(20));ctx.fillStyle='#ffdf32';ctx.fill();ctx.restore();
-      ctx.lineWidth=S(2.5);ctx.strokeStyle='#f5a623';roundedRect(ctx,X(210),Y(220),X(350),Y(58),S(20));ctx.stroke();
-      ctx.beginPath();ctx.arc(X(246),Y(249),S(20),0,Math.PI*2);ctx.fillStyle='#123b85';ctx.fill();
-      ctx.fillStyle='#ffdf32';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`900 ${S(25)}px Arial,sans-serif`;ctx.fillText('?',X(246),Y(249));
+      const qx=230,qy=270,qw=740,qh=193;
+      ctx.save();ctx.shadowColor='rgba(15,44,80,.10)';ctx.shadowBlur=S(5);ctx.shadowOffsetY=DY(2);
+      roundedRect(ctx,X(qx),Y(qy),DX(qw),DY(qh),S(24));ctx.fillStyle='#fffdf7';ctx.fill();ctx.restore();
+      ctx.lineWidth=S(4);ctx.strokeStyle='#f5a623';roundedRect(ctx,X(qx),Y(qy),DX(qw),DY(qh),S(24));ctx.stroke();
+      ctx.save();ctx.shadowColor='rgba(245,166,35,.18)';ctx.shadowBlur=S(5);ctx.shadowOffsetY=DY(2);
+      roundedRect(ctx,X(242),Y(240),DX(350),DY(59),S(20));ctx.fillStyle='#ffdf32';ctx.fill();ctx.restore();
+      ctx.lineWidth=S(2.5);ctx.strokeStyle='#f5a623';roundedRect(ctx,X(242),Y(240),DX(350),DY(59),S(20));ctx.stroke();
+      ctx.beginPath();ctx.arc(X(277),Y(269),S(19),0,Math.PI*2);ctx.fillStyle='#123b85';ctx.fill();
+      ctx.fillStyle='#ffdf32';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`900 ${S(25)}px Arial,sans-serif`;ctx.fillText('?',X(277),Y(269));
       ctx.fillStyle='#102b65';ctx.textAlign='left';ctx.textBaseline='middle';ctx.font=`900 ${S(25)}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
-      ctx.fillText('आज का गणित प्रश्न',X(275),Y(249),X(265));
-      const question=fitLines(ctx,currentQuestion.question_text,X(qw-80),3,S(42),S(28));
+      ctx.fillText('आज का गणित प्रश्न',X(307),Y(269),DX(270));
+      const question=fitLines(ctx,currentQuestion.question_text,DX(qw-70),3,S(39),S(26));
       ctx.font=`800 ${question.size}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
       ctx.fillStyle='#101d52';ctx.textAlign='center';ctx.textBaseline='middle';
       const qGap=S(5), qTotal=question.lines.length*(question.size+qGap)-qGap;
-      const qCenter=Y(qy+125);
-      question.lines.forEach((line,i)=>ctx.fillText(line,X(qx+qw/2),qCenter+(i-(question.lines.length-1)/2)*(question.size+qGap),X(qw-75)));
+      const qCenter=Y(qy+111);
+      question.lines.forEach((line,i)=>ctx.fillText(line,X(qx+qw/2),qCenter+(i-(question.lines.length-1)/2)*(question.size+qGap),DX(qw-76)));
 
-      // Two-column answer cards, with independent position and size scaling.
+      // Two-column answer cards match the reference image's spacing.
       const options=[
-        {label:'A',text:currentQuestion.option_a,x:200,y:490,color:'#0878ed',bg:'#e8f4ff'},
-        {label:'B',text:currentQuestion.option_b,x:600,y:490,color:'#ed1680',bg:'#fff0f7'},
-        {label:'C',text:currentQuestion.option_c,x:200,y:590,color:'#0b9b78',bg:'#e8fbf3'},
-        {label:'D',text:currentQuestion.option_d,x:600,y:590,color:'#f26b13',bg:'#fff4e7'}
+        {label:'A',text:currentQuestion.option_a,x:238,y:482,color:'#0878ed',bg:'#e8f4ff'},
+        {label:'B',text:currentQuestion.option_b,x:622,y:482,color:'#ed1680',bg:'#fff0f7'},
+        {label:'C',text:currentQuestion.option_c,x:238,y:580,color:'#0b9b78',bg:'#e8fbf3'},
+        {label:'D',text:currentQuestion.option_d,x:622,y:580,color:'#f26b13',bg:'#fff4e7'}
       ];
       for(const o of options){
-        const ox=o.x,oy=o.y,ow=(o.label==='A'||o.label==='C')?390:380,oh=82;
-        ctx.save();ctx.shadowColor='rgba(13,48,91,.10)';ctx.shadowBlur=S(4);ctx.shadowOffsetY=S(2);
-        roundedRect(ctx,X(ox),Y(oy),X(ow),Y(oh),S(19));ctx.fillStyle=o.bg;ctx.fill();ctx.restore();
-        ctx.lineWidth=S(2.5);ctx.strokeStyle=o.color;roundedRect(ctx,X(ox),Y(oy),X(ow),Y(oh),S(19));ctx.stroke();
-        ctx.beginPath();ctx.arc(X(ox+44),Y(oy+oh/2),S(29),0,Math.PI*2);ctx.fillStyle=o.color;ctx.fill();
-        ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`800 ${S(36)}px Arial,sans-serif`;ctx.fillText(o.label,X(ox+44),Y(oy+oh/2+1));
-        const val=fitLines(ctx,String(o.text||''),X(ow-100),2,S(40),S(25));
+        const ox=o.x,oy=o.y,ow=360,oh=82;
+        ctx.save();ctx.shadowColor='rgba(13,48,91,.10)';ctx.shadowBlur=S(4);ctx.shadowOffsetY=DY(2);
+        roundedRect(ctx,X(ox),Y(oy),DX(ow),DY(oh),S(19));ctx.fillStyle=o.bg;ctx.fill();ctx.restore();
+        ctx.lineWidth=S(2.5);ctx.strokeStyle=o.color;roundedRect(ctx,X(ox),Y(oy),DX(ow),DY(oh),S(19));ctx.stroke();
+        ctx.beginPath();ctx.arc(X(ox+42),Y(oy+oh/2),S(27),0,Math.PI*2);ctx.fillStyle=o.color;ctx.fill();
+        ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`800 ${S(34)}px Arial,sans-serif`;ctx.fillText(o.label,X(ox+42),Y(oy+oh/2+1));
+        const val=fitLines(ctx,String(o.text||''),DX(ow-90),2,S(38),S(25));
         ctx.textAlign='left';ctx.textBaseline='middle';ctx.font=`800 ${val.size}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;ctx.fillStyle='#101d52';
-        val.lines.forEach((line,i)=>ctx.fillText(line,X(ox+92),Y(oy+oh/2)+(i-(val.lines.length-1)/2)*(val.size+S(2)),X(ow-110)));
+        val.lines.forEach((line,i)=>ctx.fillText(line,X(ox+86),Y(oy+oh/2)+(i-(val.lines.length-1)/2)*(val.size+S(2)),DX(ow-100)));
       }
 
-      // Comment callout placed in the clear lower-right part of the board.
-      const cx=500,cy=790,cw=470,ch=145;
-      ctx.save();ctx.shadowColor='rgba(13,48,91,.16)';ctx.shadowBlur=S(6);ctx.shadowOffsetY=S(2);
-      roundedRect(ctx,X(cx),Y(cy),X(cw),Y(ch),S(23));ctx.fillStyle='#123b85';ctx.fill();ctx.restore();
-      ctx.lineWidth=S(3.5);ctx.strokeStyle='#ffcf28';roundedRect(ctx,X(cx),Y(cy),X(cw),Y(ch),S(23));ctx.stroke();
-      ctx.beginPath();ctx.arc(X(cx+52),Y(cy+ch/2),S(32),0,Math.PI*2);ctx.fillStyle='#ffdf32';ctx.fill();
-      ctx.fillStyle='#123b85';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`900 ${S(24)}px Arial,sans-serif`;ctx.fillText('•••',X(cx+52),Y(cy+ch/2));
-      ctx.fillStyle='#fff';ctx.font=`900 ${S(29)}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;ctx.fillText('अपना उत्तर',X(cx+300),Y(cy+54),X(cw-125));
-      ctx.fillStyle='#ffdf32';ctx.font=`900 ${S(29)}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;ctx.fillText('कमेंट में लिखें',X(cx+300),Y(cy+91),X(cw-125));
+      // Comment callout in the lower-right board area, clear of the teacher's face.
+      const cx=547,cy=688,cw=415,ch=119;
+      ctx.save();ctx.shadowColor='rgba(13,48,91,.16)';ctx.shadowBlur=S(6);ctx.shadowOffsetY=DY(2);
+      roundedRect(ctx,X(cx),Y(cy),DX(cw),DY(ch),S(23));ctx.fillStyle='#123b85';ctx.fill();ctx.restore();
+      ctx.lineWidth=S(3.5);ctx.strokeStyle='#ffcf28';roundedRect(ctx,X(cx),Y(cy),DX(cw),DY(ch),S(23));ctx.stroke();
+      ctx.beginPath();ctx.arc(X(cx+48),Y(cy+ch/2),S(30),0,Math.PI*2);ctx.fillStyle='#ffdf32';ctx.fill();
+      ctx.fillStyle='#123b85';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`900 ${S(24)}px Arial,sans-serif`;ctx.fillText('•••',X(cx+48),Y(cy+ch/2));
+      ctx.fillStyle='#fff';ctx.font=`900 ${S(29)}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;ctx.fillText('अपना उत्तर',X(cx+246),Y(cy+43),DX(cw-105));
+      ctx.fillStyle='#ffdf32';ctx.font=`900 ${S(29)}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;ctx.fillText('कमेंट में लिखें',X(cx+246),Y(cy+78),DX(cw-105));
 
       generatedImageData=c.toDataURL('image/png');
       $('imagePreview').src=generatedImageData;$('imagePreviewWrap').hidden=false;$('imageStatus').textContent='FIXED TEMPLATE • DESIGNED QUESTION INSERTED';
-      updatePublishAvailability();renderPlatformPreviews();msg('Question को टेम्पलेट के अनुपात में सही पोज़िशन पर फिट किया गया।','success');
+      updatePublishAvailability();renderPlatformPreviews();msg('Question को मास्टर टेम्पलेट पर रेफरेंस लेआउट के अनुसार रखा गया।','success');
     }catch(e){console.error('[Ganit Setu] Image layout error',e);msg(`Question Image नहीं बन पाई: ${e.message||'कृपया template और question data जाँचें।'}`,'error');}
     finally{btn.disabled=false;btn.textContent='🖼️ Template में Question डालें'}
   }
