@@ -586,7 +586,7 @@ Ganit Setu — MP Board Mathematics Learning`,
       // never use X/Y (absolute positions) to calculate width or height.
       // Chapter strip: centered horizontally, with breathing room from the top of the board.
       // Keep all other question/option/comment coordinates unchanged.
-      const chapterW=764, chapterH=50, chapterX=(1100-chapterW)/2, chapterY=173;
+      const chapterW=764, chapterH=55, chapterX=(1200-chapterW)/2, chapterY=194;
       ctx.save();ctx.shadowColor='rgba(13,48,91,.14)';ctx.shadowBlur=S(5);ctx.shadowOffsetY=DY(2);
       roundedRect(ctx,X(chapterX),Y(chapterY),DX(chapterW),DY(chapterH),S(18));ctx.fillStyle='#123b85';ctx.fill();ctx.restore();
       ctx.fillStyle='#ffdf32';ctx.textAlign='center';ctx.textBaseline='middle';
@@ -596,17 +596,17 @@ Ganit Setu — MP Board Mathematics Learning`,
       ctx.fillText(chapterLine,X(chapterX+chapterW/2),Y(chapterY+chapterH/2),DX(710));
 
       // Question card and yellow section label
-      const qx=230,qy=284,qw=740,qh=193;
+      const qx=230,qy=270,qw=740,qh=193;
       ctx.save();ctx.shadowColor='rgba(15,44,80,.10)';ctx.shadowBlur=S(5);ctx.shadowOffsetY=DY(2);
       roundedRect(ctx,X(qx),Y(qy),DX(qw),DY(qh),S(24));ctx.fillStyle='#fffdf7';ctx.fill();ctx.restore();
       ctx.lineWidth=S(4);ctx.strokeStyle='#f5a623';roundedRect(ctx,X(qx),Y(qy),DX(qw),DY(qh),S(24));ctx.stroke();
       ctx.save();ctx.shadowColor='rgba(245,166,35,.18)';ctx.shadowBlur=S(5);ctx.shadowOffsetY=DY(2);
-      roundedRect(ctx,X(242),Y(229),DX(350),DY(48),S(17));ctx.fillStyle='#ffdf32';ctx.fill();ctx.restore();
-      ctx.lineWidth=S(2.5);ctx.strokeStyle='#f5a623';roundedRect(ctx,X(242),Y(229),DX(350),DY(48),S(17));ctx.stroke();
-      ctx.beginPath();ctx.arc(X(277),Y(253),S(17),0,Math.PI*2);ctx.fillStyle='#123b85';ctx.fill();
-      ctx.fillStyle='#ffdf32';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`900 ${S(23)}px Arial,sans-serif`;ctx.fillText('?',X(277),Y(253));
-      ctx.fillStyle='#102b65';ctx.textAlign='left';ctx.textBaseline='middle';ctx.font=`900 ${S(22)}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
-      ctx.fillText('आज का गणित प्रश्न',X(307),Y(253),DX(270));
+      roundedRect(ctx,X(242),Y(240),DX(350),DY(59),S(20));ctx.fillStyle='#ffdf32';ctx.fill();ctx.restore();
+      ctx.lineWidth=S(2.5);ctx.strokeStyle='#f5a623';roundedRect(ctx,X(242),Y(240),DX(350),DY(59),S(20));ctx.stroke();
+      ctx.beginPath();ctx.arc(X(277),Y(269),S(19),0,Math.PI*2);ctx.fillStyle='#123b85';ctx.fill();
+      ctx.fillStyle='#ffdf32';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`900 ${S(25)}px Arial,sans-serif`;ctx.fillText('?',X(277),Y(269));
+      ctx.fillStyle='#102b65';ctx.textAlign='left';ctx.textBaseline='middle';ctx.font=`900 ${S(25)}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
+      ctx.fillText('आज का गणित प्रश्न',X(307),Y(269),DX(270));
       const question=fitLines(ctx,currentQuestion.question_text,DX(qw-70),3,S(39),S(26));
       ctx.font=`800 ${question.size}px "Noto Sans Devanagari","Nirmala UI",Arial,sans-serif`;
       ctx.fillStyle='#101d52';ctx.textAlign='center';ctx.textBaseline='middle';
