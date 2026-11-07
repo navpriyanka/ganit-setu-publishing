@@ -620,10 +620,11 @@ Ganit Setu — MP Board Mathematics Learning`,
 
       // Two-column answer cards match the reference image's spacing.
       const options=[
-        {label:'A',text:currentQuestion.option_a,x:238,y:482,color:'#0878ed',bg:'#e8f4ff'},
-        {label:'B',text:currentQuestion.option_b,x:622,y:482,color:'#ed1680',bg:'#fff0f7'},
-        {label:'C',text:currentQuestion.option_c,x:238,y:580,color:'#0b9b78',bg:'#e8fbf3'},
-        {label:'D',text:currentQuestion.option_d,x:622,y:580,color:'#f26b13',bg:'#fff4e7'}
+        // All four choices intentionally use identical styling; never reveal the correct option by color.
+        {label:'A',text:currentQuestion.option_a,x:238,y:482,color:'#1554a5',bg:'#e5f1ff'},
+        {label:'B',text:currentQuestion.option_b,x:622,y:482,color:'#1554a5',bg:'#e5f1ff'},
+        {label:'C',text:currentQuestion.option_c,x:238,y:580,color:'#1554a5',bg:'#e5f1ff'},
+        {label:'D',text:currentQuestion.option_d,x:622,y:580,color:'#1554a5',bg:'#e5f1ff'}
       ];
       for(const o of options){
         const ox=o.x,oy=o.y,ow=360,oh=82;
