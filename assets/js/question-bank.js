@@ -89,7 +89,7 @@
   function payloadFrom(row) {
     return {
       id: String(row.id || newId()).trim(),
-      class_level: Number(row.class_level),
+      class_level: String(row.class_level ?? "").trim(),
       chapter_number: Number(row.chapter_number),
       chapter_name: String(row.chapter_name || `अध्याय ${row.chapter_number}`).trim(),
       question_text: String(row.question_text || "").trim(),
@@ -100,18 +100,24 @@
       correct_option: String(row.correct_option || "").trim().toUpperCase(),
       hint: String(row.hint || "").trim() || null,
       explanation: String(row.explanation || "").trim() || null,
+      difficulty: String(row.difficulty || "").trim() || null,
+      medium: String(row.medium || "").trim() || null,
+      exam_year: String(row.exam_year || "").trim() ? Number(row.exam_year) : null,
+      paper_set: String(row.paper_set || "").trim() || null,
+      source_question: String(row.source_question || "").trim() || null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
   }
   function validate(row) {
     const p = payloadFrom(row);
-    if (![9,10].includes(p.class_level)) return "class_level 9 या 10 होना चाहिए";
+    if (![9,10].includes(Number(p.class_level))) return "class_level 9 या 10 होना चाहिए";
     if (!Number.isInteger(p.chapter_number) || p.chapter_number < 1 || p.chapter_number > maxCh(p.class_level)) return "chapter_number गलत है";
     if (!p.question_text) return "question_text खाली है";
     if (![p.option_a,p.option_b,p.option_c,p.option_d].every(Boolean)) return "चारों options जरूरी हैं";
     if (!["A","B","C","D"].includes(p.correct_option)) return "correct_option A/B/C/D होना चाहिए";
     if (!p.id) return "Question ID खाली है";
+    if (p.exam_year !== null && !Number.isInteger(p.exam_year)) return "exam_year में सही वर्ष लिखें";
     return null;
   }
   function csvEscape(v) {
@@ -119,8 +125,8 @@
     return /[",\n\r]/.test(s) ? `"${s.replaceAll('"','""')}"` : s;
   }
   function downloadTemplate() {
-    const headers = ["id","class_level","chapter_number","chapter_name","question_text","option_a","option_b","option_c","option_d","correct_option","hint","explanation"];
-    const sample = ["Q900","9","1","संख्या पद्धति","उदाहरण प्रश्न?","विकल्प A","विकल्प B","विकल्प C","विकल्प D","A","संकेत","व्याख्या"];
+    const headers = ["id","class_level","chapter_number","chapter_name","question_text","option_a","option_b","option_c","option_d","correct_option","hint","explanation","difficulty","medium","exam_year","paper_set","source_question"];
+    const sample = ["Q900","9","1","संख्या पद्धति","उदाहरण प्रश्न?","विकल्प A","विकल्प B","विकल्प C","विकल्प D","A","संकेत","व्याख्या","easy","Hindi","2026","A","Q1(i)"];
     const csv = "\ufeff" + headers.map(csvEscape).join(",") + "\r\n" + sample.map(csvEscape).join(",");
     const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
     const url = URL.createObjectURL(blob);
@@ -225,9 +231,9 @@
       (groups[k] ||= []).push(r);
     });
     for (const [k,items] of Object.entries(groups)) {
-      const [cl,ch] = k.split("|").map(Number);
+      const [cl,ch] = k.split("|");
       try {
-        const {data,error} = await sb.from("questions").select("id,question_text").eq("class_level",cl).eq("chapter_number",ch);
+        const {data,error} = await sb.from("questions").select("id,question_text").eq("class_level",cl).eq("chapter_number",Number(ch));
         if (error) throw error;
         const existing = new Set((data||[]).map(q=>normalize(q.question_text)));
         const ids = new Set((data||[]).map(q=>String(q.id)));
